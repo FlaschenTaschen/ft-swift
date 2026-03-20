@@ -1,0 +1,504 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug send-text",
+            "target": "send-text",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug send-text"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release send-text",
+            "target": "send-text",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release send-text"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug send-image",
+            "target": "send-image",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug send-image"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release send-image",
+            "target": "send-image",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release send-image"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug send-video",
+            "target": "send-video",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug send-video"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release send-video",
+            "target": "send-video",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release send-video"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug ft-debugger",
+            "target": "ft-debugger",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug ft-debugger"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release ft-debugger",
+            "target": "ft-debugger",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release ft-debugger"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug simple-example",
+            "target": "simple-example",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug simple-example"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release simple-example",
+            "target": "simple-example",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release simple-example"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug simple-animation",
+            "target": "simple-animation",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug simple-animation"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release simple-animation",
+            "target": "simple-animation",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release simple-animation"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug black",
+            "target": "black",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug black"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release black",
+            "target": "black",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release black"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug random-dots",
+            "target": "random-dots",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug random-dots"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release random-dots",
+            "target": "random-dots",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release random-dots"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug plasma",
+            "target": "plasma",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug plasma"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release plasma",
+            "target": "plasma",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release plasma"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug matrix",
+            "target": "matrix",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug matrix"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release matrix",
+            "target": "matrix",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release matrix"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug blur",
+            "target": "blur",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug blur"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release blur",
+            "target": "blur",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release blur"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug quilt",
+            "target": "quilt",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug quilt"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release quilt",
+            "target": "quilt",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release quilt"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug firefly",
+            "target": "firefly",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug firefly"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release firefly",
+            "target": "firefly",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release firefly"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug depth",
+            "target": "depth",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug depth"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release depth",
+            "target": "depth",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release depth"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug life",
+            "target": "life",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug life"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release life",
+            "target": "life",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release life"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug fractal",
+            "target": "fractal",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug fractal"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release fractal",
+            "target": "fractal",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release fractal"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug sierpinski",
+            "target": "sierpinski",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug sierpinski"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release sierpinski",
+            "target": "sierpinski",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release sierpinski"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug maze",
+            "target": "maze",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug maze"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release maze",
+            "target": "maze",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release maze"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug lines",
+            "target": "lines",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug lines"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release lines",
+            "target": "lines",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release lines"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug hack",
+            "target": "hack",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug hack"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release hack",
+            "target": "hack",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release hack"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug words",
+            "target": "words",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug words"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release words",
+            "target": "words",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release words"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug nb-logo",
+            "target": "nb-logo",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug nb-logo"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release nb-logo",
+            "target": "nb-logo",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release nb-logo"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug sf-logo",
+            "target": "sf-logo",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug sf-logo"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release sf-logo",
+            "target": "sf-logo",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release sf-logo"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug midi",
+            "target": "midi",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug midi"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release midi",
+            "target": "midi",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release midi"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Debug kbd2midi",
+            "target": "kbd2midi",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug kbd2midi"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ft-swift}",
+            "name": "Release kbd2midi",
+            "target": "kbd2midi",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release kbd2midi"
+        }
+    ]
+}
