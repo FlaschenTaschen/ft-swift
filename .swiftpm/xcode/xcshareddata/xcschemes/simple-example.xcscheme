@@ -64,6 +64,10 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
+            argument = "-t 5"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "localhost"
             isEnabled = "YES">
          </CommandLineArgument>

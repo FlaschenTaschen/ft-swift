@@ -64,27 +64,19 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-h"
+            argument = "-h localhost"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "localhost"
+            argument = "-d 100"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-d"
+            argument = "-t 30"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "10"
-            isEnabled = "YES">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-l"
-            isEnabled = "YES">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "5"
+            argument = "-l 5"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

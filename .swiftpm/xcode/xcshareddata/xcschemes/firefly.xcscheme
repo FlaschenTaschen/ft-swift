@@ -72,7 +72,11 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-p auto"
+            argument = "-d 50"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-p chase"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
