@@ -32,12 +32,26 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
     private let height_: Int
     private var buffer: Data
     private var pixelBufferStart: Int
-    private var footerStart: Int
+    private var offsetX: Int = 0
+    private var offsetY: Int = 0
+    private var offsetZ: Int = 0
+    private let maxUDPSize: Int
+    private static let headerReserve = 64
 
     public init(fileDescriptor: Int32, width: Int, height: Int) {
         self.fileDescriptor = fileDescriptor
         self.width_ = width
         self.height_ = height
+
+        // Read FT_UDP_SIZE environment variable, default to 65507
+        let envSize = ProcessInfo.processInfo.environment["FT_UDP_SIZE"].flatMap(Int.init) ?? 65507
+        self.maxUDPSize = envSize
+
+        // Validate that at least 1 row fits in a packet
+        let rowSize = 3 * width
+        let maxRowsPerPacket = (self.maxUDPSize - UDPFlaschenTaschen.headerReserve) / rowSize
+        precondition(maxRowsPerPacket > 0,
+                     "UDP packet size \(self.maxUDPSize) too small for canvas width \(width) (minimum needed: \(rowSize + UDPFlaschenTaschen.headerReserve) bytes)")
 
         // Build PPM header: "P6\n<width> <height>\n255\n"
         let header = "P6\n\(width) \(height)\n255\n"
@@ -47,16 +61,10 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
         let pixelBufferSize = width * height * 3
         bufferData.append(Data(count: pixelBufferSize))
 
-        // Add footer space for offsets (fixed width for offset numbers + null terminator)
-        let footer = "\n0000 0000 0000\n"
-        bufferData.append(footer.data(using: .ascii)!)
-        bufferData.append(0)  // Null terminator to match C++ kFooterLen
-
         self.buffer = bufferData
         self.pixelBufferStart = header.count
-        self.footerStart = bufferData.count - footer.count
 
-        logger.debug("Canvas created \(width, privacy: .public)x\(height, privacy: .public), buffer size: \(bufferData.count, privacy: .public) bytes, fd: \(fileDescriptor, privacy: .public)")
+        logger.debug("Canvas created \(width, privacy: .public)x\(height, privacy: .public), buffer size: \(bufferData.count, privacy: .public) bytes, fd: \(fileDescriptor, privacy: .public), max UDP size: \(self.maxUDPSize, privacy: .public) bytes")
         setOffset(x: 0, y: 0, z: 0)
     }
 
@@ -116,9 +124,9 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
     }
 
     public func setOffset(x: Int, y: Int, z: Int) {
-        let offsetString = String(format: "\n%d %d %d\n", x, y, z)
-        let offsetData = offsetString.data(using: .ascii)!
-        buffer.replaceSubrange(footerStart..<buffer.count, with: offsetData)
+        offsetX = x
+        offsetY = y
+        offsetZ = z
     }
 
     public func send() {
@@ -127,17 +135,51 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
             return
         }
 
-        let bytesWritten = buffer.withUnsafeBytes { bufferPtr in
-            Darwin.write(fileDescriptor, bufferPtr.baseAddress!, buffer.count)
-        }
-        if bytesWritten < 0 {
-            logger.error("write() failed, errno: \(errno, privacy: .public)")
+        let rowSize = 3 * width_
+        let maxRowsPerPacket = (maxUDPSize - UDPFlaschenTaschen.headerReserve) / rowSize
+        var chunkRowOffset = 0
+
+        while chunkRowOffset < height_ {
+            let rowsThisChunk = min(maxRowsPerPacket, height_ - chunkRowOffset)
+
+            // Build PPM header with #FT: offset comment for this chunk
+            let header = String(format: "P6\n%d %d\n#FT: %d %d %d\n255\n",
+                               width_, rowsThisChunk,
+                               offsetX, offsetY + chunkRowOffset, offsetZ)
+            guard let headerData = header.data(using: .ascii) else {
+                logger.error("Failed to encode PPM header")
+                return
+            }
+
+            // Extract pixel data for this chunk
+            let pixelStart = pixelBufferStart + chunkRowOffset * rowSize
+            let pixelEnd = pixelStart + rowsThisChunk * rowSize
+
+            // Construct packet: header + pixel data
+            var packet = Data(capacity: headerData.count + rowsThisChunk * rowSize)
+            packet.append(headerData)
+            packet.append(buffer[pixelStart..<pixelEnd])
+
+            // Send the packet
+            let sent = packet.withUnsafeBytes { bufferPtr in
+                Darwin.write(fileDescriptor, bufferPtr.baseAddress!, packet.count)
+            }
+
+            if sent < 0 {
+                logger.error("write() failed at row \(chunkRowOffset, privacy: .public), errno: \(errno, privacy: .public)")
+                return
+            }
+
+            chunkRowOffset += rowsThisChunk
         }
     }
 
     public func clone() -> UDPFlaschenTaschen {
         let clone = UDPFlaschenTaschen(fileDescriptor: fileDescriptor, width: width_, height: height_)
         clone.buffer = self.buffer
+        clone.offsetX = self.offsetX
+        clone.offsetY = self.offsetY
+        clone.offsetZ = self.offsetZ
         return clone
     }
 }

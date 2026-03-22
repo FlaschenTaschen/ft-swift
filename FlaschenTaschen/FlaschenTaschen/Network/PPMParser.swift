@@ -36,22 +36,25 @@ nonisolated final class PPMParser {
         }
         offset += 2
 
-        skipWhitespaceAndComments(buffer: buffer, offset: &offset)
+        skipWhitespace(buffer: buffer, offset: &offset)
 
         let (width, newOffset1) = try parseNumber(buffer: buffer, offset: offset)
         offset = newOffset1
-        skipWhitespaceAndComments(buffer: buffer, offset: &offset)
+        skipWhitespace(buffer: buffer, offset: &offset)
 
         let (height, newOffset2) = try parseNumber(buffer: buffer, offset: offset)
         offset = newOffset2
-        skipWhitespaceAndComments(buffer: buffer, offset: &offset)
+        skipWhitespace(buffer: buffer, offset: &offset)
 
         var offsetX = 0
         var offsetY = 0
         var layer = 0
 
-        // Parse metadata from header comments
+        // Parse metadata from header comments BEFORE skipping them
         parseHeaderMetadata(buffer: buffer, offset: &offset, offsetX: &offsetX, offsetY: &offsetY, layer: &layer)
+
+        // After header metadata, skip any remaining whitespace/comments before maxValue
+        skipWhitespaceAndComments(buffer: buffer, offset: &offset)
 
         let (maxValue, newOffset3) = try parseNumber(buffer: buffer, offset: offset)
         offset = newOffset3
@@ -138,6 +141,7 @@ nonisolated final class PPMParser {
 
             // Check if this is an FT comment
             if line.hasPrefix("FT:") {
+                logger.debug("Found header comment: #\(line, privacy: .public)")
                 parseOffsets(line: String(line.dropFirst(3)), offsetX: &offsetX, offsetY: &offsetY, layer: &layer)
             }
 
@@ -155,6 +159,12 @@ nonisolated final class PPMParser {
         }
         if components.count >= 3 {
             layer = components[2]
+        }
+        if components.count >= 2 {
+            let x = offsetX
+            let y = offsetY
+            let z = layer
+            logger.debug("📍 Parsed #FT: offset=(\(x, privacy: .public),\(y, privacy: .public)) layer=\(z, privacy: .public)")
         }
     }
 

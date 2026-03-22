@@ -17,6 +17,11 @@ actor UDPServer {
     private var startupError: Error?
     private var stopContinuation: CheckedContinuation<Void, Error>?
 
+    // Layer persistence for multi-packet accumulation
+    private var layerBuffers: [Int: [PixelColor]] = [:]
+    private var lastPacketTime: Date?
+    private let packetTimeoutSeconds: TimeInterval = 1.0
+
     init(gridWidth: Int, gridHeight: Int,
          onPixelUpdate: @escaping (PPMImage) -> Void,
          onError: @escaping (String) -> Void,
@@ -159,32 +164,69 @@ actor UDPServer {
         onError("Receive error: \(error.localizedDescription)")
     }
 
-    private func processPacket(_ data: Data) {
+    func processPacket(_ data: Data) {
         do {
-            var image = try PPMParser.parse(data: data)
-            logger.debug("Packet received: size=\(image.width, privacy: .public)x\(image.height, privacy: .public) offset=(\(image.offsetX, privacy: .public),\(image.offsetY, privacy: .public)) layer=\(image.layer, privacy: .public)")
+            let image = try PPMParser.parse(data: data)
+            logger.info("🔵 PACKET: size=\(image.width, privacy: .public)x\(image.height, privacy: .public) offset=(\(image.offsetX, privacy: .public),\(image.offsetY, privacy: .public)) LAYER=\(image.layer, privacy: .public) pixels=\(image.pixels.count, privacy: .public)")
 
-            var pixelGrid = Array(repeating: PixelColor(id: 0, red: 0, green: 0, blue: 0),
-                                 count: gridWidth * gridHeight)
+            let now = Date()
+            let layer = image.layer
 
-            for y in 0..<image.height {
-                let gridY = image.offsetY + y
-                if gridY < 0 || gridY >= gridHeight { continue }
-
-                for x in 0..<image.width {
-                    let gridX = image.offsetX + x
-                    if gridX < 0 || gridX >= gridWidth { continue }
-
-                    let sourceIndex = y * image.width + x
-                    let targetIndex = gridY * gridWidth + gridX
-                    let sourcePixel = image.pixels[sourceIndex]
-                    pixelGrid[targetIndex] = PixelColor(id: 0, red: sourcePixel.red, green: sourcePixel.green, blue: sourcePixel.blue)
-                }
+            // Check if we need to reset (new frame or timeout)
+            if lastPacketTime == nil ||
+               (now.timeIntervalSince(lastPacketTime!) > packetTimeoutSeconds) {
+                layerBuffers.removeAll()
+                logger.debug("Resetting layer buffers (timeout or first packet)")
             }
 
-            image = PPMImage(width: gridWidth, height: gridHeight, pixels: pixelGrid,
-                           offsetX: image.offsetX, offsetY: image.offsetY, layer: image.layer)
-            self.onPixelUpdate(image)
+            // Initialize layer buffer if needed
+            if layerBuffers[layer] == nil {
+                layerBuffers[layer] = Array(repeating: PixelColor(id: 0, red: 0, green: 0, blue: 0),
+                                           count: gridWidth * gridHeight)
+                logger.info("📦 INIT layer \(layer, privacy: .public)")
+            }
+
+            // Accumulate this packet's pixels into the layer buffer
+            if var pixelGrid = layerBuffers[layer] {
+                logger.info("📥 ACCUMULATING to layer \(layer, privacy: .public): rows \(image.offsetY, privacy: .public)-\(image.offsetY + image.height - 1, privacy: .public)")
+                for y in 0..<image.height {
+                    let gridY = image.offsetY + y
+                    if gridY < 0 || gridY >= gridHeight { continue }
+
+                    for x in 0..<image.width {
+                        let gridX = image.offsetX + x
+                        if gridX < 0 || gridX >= gridWidth { continue }
+
+                        let sourceIndex = y * image.width + x
+                        let targetIndex = gridY * gridWidth + gridX
+                        let sourcePixel = image.pixels[sourceIndex]
+                        pixelGrid[targetIndex] = PixelColor(id: 0, red: sourcePixel.red, green: sourcePixel.green, blue: sourcePixel.blue)
+                    }
+                }
+
+                // Store updated buffer
+                layerBuffers[layer] = pixelGrid
+                lastPacketTime = now
+
+                // Check if frame is complete (packets cover full height)
+                let frameComplete = image.offsetY + image.height >= self.gridHeight
+
+                if frameComplete {
+                    // Frame is complete - send to display and reset buffer
+                    let completeImage = PPMImage(width: self.gridWidth, height: self.gridHeight, pixels: pixelGrid,
+                                                offsetX: 0, offsetY: 0, layer: layer)
+                    let nonBlackCount = pixelGrid.filter { !($0.red == 0 && $0.green == 0 && $0.blue == 0) }.count
+                    logger.info("🖼️ SEND layer \(layer, privacy: .public): \(self.gridWidth, privacy: .public)x\(self.gridHeight, privacy: .public) (\(nonBlackCount, privacy: .public) non-black pixels)")
+                    self.onPixelUpdate(completeImage)
+
+                    logger.debug("Layer \(layer, privacy: .public): frame complete (offset=\(image.offsetY, privacy: .public) + height=\(image.height, privacy: .public) >= gridHeight=\(self.gridHeight, privacy: .public)), resetting buffer")
+                    // Reset buffer for next frame
+                    layerBuffers[layer] = nil
+                } else {
+                    // Frame incomplete - accumulate more packets
+                    logger.debug("Layer \(layer, privacy: .public): accumulating... coverage so far: rows 0-\(image.offsetY + image.height - 1, privacy: .public) of \(self.gridHeight, privacy: .public)")
+                }
+            }
         } catch {
             logger.warning("Discarding malformed packet: \(error.localizedDescription, privacy: .public)")
         }
