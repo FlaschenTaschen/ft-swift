@@ -11,6 +11,7 @@ struct PixelGridView: View {
     @State private var pixelSize: CGFloat = 16
     @State private var isFullScreen: Bool = false
     @State private var showServerPanel: Bool = true
+    @State private var availableSize: CGSize = .zero
 
     var gridColumns: [GridItem] {
         Array(repeating: GridItem(.fixed(pixelSize), spacing: 0), count: displayModel.gridWidth)
@@ -32,12 +33,14 @@ struct PixelGridView: View {
             .onGeometryChange(for: CGSize.self) { geo in
                 geo.size
             } action: { size in
-                let availableWidth = size.width - 16
-                let availableHeight = size.height - 16
-                pixelSize = min(
-                    availableWidth / CGFloat(displayModel.gridWidth),
-                    availableHeight / CGFloat(displayModel.gridHeight)
-                )
+                availableSize = size
+                recalculatePixelSize()
+            }
+            .onChange(of: displayModel.gridWidth) {
+                recalculatePixelSize()
+            }
+            .onChange(of: displayModel.gridHeight) {
+                recalculatePixelSize()
             }
         }
         .overlay {
@@ -56,6 +59,17 @@ struct PixelGridView: View {
                 .cornerRadius(8)
             }
         }
+    }
+
+    private func recalculatePixelSize() {
+        guard displayModel.gridWidth > 0, displayModel.gridHeight > 0 else { return }
+
+        let availableWidth = availableSize.width - 16
+        let availableHeight = availableSize.height - 16
+        pixelSize = min(
+            availableWidth / CGFloat(displayModel.gridWidth),
+            availableHeight / CGFloat(displayModel.gridHeight)
+        )
     }
 }
 
