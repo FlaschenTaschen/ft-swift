@@ -117,9 +117,6 @@ actor ImageDisplayController {
             targetHeight: canvas.height
         )
 
-        drawFrame(frame: scaledFrame)
-        canvas.send()
-
         // Keep display alive for timeout duration
         while !shouldStop {
             if let timeout = args.timeoutSeconds {
@@ -128,6 +125,9 @@ actor ImageDisplayController {
                     break
                 }
             }
+
+            drawFrame(frame: scaledFrame)
+            canvas.send()
 
             try? await Task.sleep(for: .milliseconds(100))
         }

@@ -38,34 +38,56 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
     private let maxUDPSize: Int
     private static let headerReserve = 64
 
-    public init(fileDescriptor: Int32, width: Int, height: Int) {
+    /// Query SO_SNDBUF from socket, with FT_UDP_SIZE env var override
+    private nonisolated static func getMaxUDPSize(fd: Int32) -> Int {
+        // Env var override (highest priority)
+        if let envStr = ProcessInfo.processInfo.environment["FT_UDP_SIZE"],
+           let envSize = Int(envStr), envSize > 0 {
+            return envSize
+        }
+        // Query SO_SNDBUF from the connected socket
+        if fd >= 0 {
+            var sndBuf: Int32 = 0
+            var len = socklen_t(MemoryLayout<Int32>.size)
+            if getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sndBuf, &len) == 0, sndBuf > 0 {
+                return min(Int(sndBuf), 65507)
+            }
+        }
+        return 65507
+    }
+
+    /// Create PPM buffer with pixel space
+    private nonisolated static func makeBuffer(width: Int, height: Int) -> (buffer: Data, pixelStart: Int) {
+        let header = "P6\n\(width) \(height)\n255\n"
+        var buf = header.data(using: .ascii)!
+        buf.append(Data(count: width * height * 3))
+        return (buf, header.count)
+    }
+
+    /// Designated initializer that accepts explicit maxUDPSize (for testing and advanced use)
+    public init(fileDescriptor: Int32, width: Int, height: Int, maxUDPSize: Int) {
         self.fileDescriptor = fileDescriptor
         self.width_ = width
         self.height_ = height
-
-        // Read FT_UDP_SIZE environment variable, default to 65507
-        let envSize = ProcessInfo.processInfo.environment["FT_UDP_SIZE"].flatMap(Int.init) ?? 65507
-        self.maxUDPSize = envSize
+        self.maxUDPSize = maxUDPSize
 
         // Validate that at least 1 row fits in a packet
         let rowSize = 3 * width
-        let maxRowsPerPacket = (self.maxUDPSize - UDPFlaschenTaschen.headerReserve) / rowSize
+        let maxRowsPerPacket = (maxUDPSize - UDPFlaschenTaschen.headerReserve) / rowSize
         precondition(maxRowsPerPacket > 0,
-                     "UDP packet size \(self.maxUDPSize) too small for canvas width \(width) (minimum needed: \(rowSize + UDPFlaschenTaschen.headerReserve) bytes)")
+                     "UDP packet size \(maxUDPSize) too small for canvas width \(width) (minimum needed: \(rowSize + UDPFlaschenTaschen.headerReserve) bytes)")
 
-        // Build PPM header: "P6\n<width> <height>\n255\n"
-        let header = "P6\n\(width) \(height)\n255\n"
-        var bufferData = header.data(using: .ascii)!
-
-        // Add pixel buffer space (RGB = 3 bytes per pixel)
-        let pixelBufferSize = width * height * 3
-        bufferData.append(Data(count: pixelBufferSize))
-
+        let (bufferData, pixelStart) = Self.makeBuffer(width: width, height: height)
         self.buffer = bufferData
-        self.pixelBufferStart = header.count
+        self.pixelBufferStart = pixelStart
 
-        logger.debug("Canvas created \(width, privacy: .public)x\(height, privacy: .public), buffer size: \(bufferData.count, privacy: .public) bytes, fd: \(fileDescriptor, privacy: .public), max UDP size: \(self.maxUDPSize, privacy: .public) bytes")
+        logger.debug("Canvas created \(width, privacy: .public)x\(height, privacy: .public), buffer size: \(bufferData.count, privacy: .public) bytes, fd: \(fileDescriptor, privacy: .public), max UDP size: \(maxUDPSize, privacy: .public) bytes")
         setOffset(x: 0, y: 0, z: 0)
+    }
+
+    /// Public convenience initializer that queries SO_SNDBUF from socket
+    public convenience init(fileDescriptor: Int32, width: Int, height: Int) {
+        self.init(fileDescriptor: fileDescriptor, width: width, height: height, maxUDPSize: Self.getMaxUDPSize(fd: fileDescriptor))
     }
 
     public var width: Int {
@@ -74,6 +96,10 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
 
     public var height: Int {
         return height_
+    }
+
+    public var maxPacketSize: Int {
+        return maxUDPSize
     }
 
     public func setPixel(x: Int, y: Int, color: Color) {
@@ -137,7 +163,12 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
 
         let rowSize = 3 * width_
         let maxRowsPerPacket = (maxUDPSize - UDPFlaschenTaschen.headerReserve) / rowSize
+
+        // Calculate total number of packets
+        let totalPackets = (height_ + maxRowsPerPacket - 1) / maxRowsPerPacket
+
         var chunkRowOffset = 0
+        var packetNumber = 1
 
         while chunkRowOffset < height_ {
             let rowsThisChunk = min(maxRowsPerPacket, height_ - chunkRowOffset)
@@ -166,12 +197,31 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
             }
 
             if sent < 0 {
-                logger.error("write() failed at row \(chunkRowOffset, privacy: .public), errno: \(errno, privacy: .public)")
+                logger.error("write() failed at packet \(packetNumber, privacy: .public) of \(totalPackets, privacy: .public), errno: \(errno, privacy: .public)")
                 return
             }
 
+            if totalPackets > 1 {
+                logger.debug("Sent packet \(packetNumber, privacy: .public) of \(totalPackets, privacy: .public): rows \(chunkRowOffset, privacy: .public)-\(chunkRowOffset + rowsThisChunk - 1, privacy: .public)")
+            }
+
             chunkRowOffset += rowsThisChunk
+            packetNumber += 1
         }
+    }
+
+    /// Return packet boundaries for testing (pure math, no I/O)
+    public func packetRanges() -> [(rowStart: Int, rowCount: Int)] {
+        let rowSize = 3 * width_
+        let maxRows = (maxUDPSize - UDPFlaschenTaschen.headerReserve) / rowSize
+        var result: [(Int, Int)] = []
+        var offset = 0
+        while offset < height_ {
+            let rows = min(maxRows, height_ - offset)
+            result.append((offset, rows))
+            offset += rows
+        }
+        return result
     }
 
     public func clone() -> UDPFlaschenTaschen {
