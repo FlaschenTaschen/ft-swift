@@ -9,25 +9,17 @@ struct UDPServerAccumulationTests {
 
     // MARK: - Mock Tracking
 
-    /// Track all pixels sent to display for verification
+    /// Track all pixels sent to display for verification.
+    /// `UDPServer` awaits `onPixelUpdate`, so tests can use `await tracker.recordUpdate` without a nested `Task` race.
     actor PixelUpdateTracker {
         private(set) var updates: [PPMImage] = []
-        private(set) var errorMessages: [String] = []
 
         func recordUpdate(_ image: PPMImage) {
             updates.append(image)
         }
 
-        func recordError(_ message: String) {
-            errorMessages.append(message)
-        }
-
         func getUpdates() -> [PPMImage] {
-            return updates
-        }
-
-        func getErrors() -> [String] {
-            return errorMessages
+            updates
         }
 
         func clearUpdates() {
@@ -73,15 +65,9 @@ struct UDPServerAccumulationTests {
             gridWidth: 64,
             gridHeight: 64,
             onPixelUpdate: { image in
-                Task {
-                    await tracker.recordUpdate(image)
-                }
+                await tracker.recordUpdate(image)
             },
-            onError: { error in
-                Task {
-                    await tracker.recordError(error)
-                }
-            },
+            onError: { _ in },
             onReady: {}
         )
 
@@ -114,9 +100,7 @@ struct UDPServerAccumulationTests {
             gridWidth: 64,
             gridHeight: 64,
             onPixelUpdate: { image in
-                Task {
-                    await tracker.recordUpdate(image)
-                }
+                await tracker.recordUpdate(image)
             },
             onError: { _ in },
             onReady: {}
@@ -165,9 +149,7 @@ struct UDPServerAccumulationTests {
             gridWidth: 64,
             gridHeight: 64,
             onPixelUpdate: { image in
-                Task {
-                    await tracker.recordUpdate(image)
-                }
+                await tracker.recordUpdate(image)
             },
             onError: { _ in },
             onReady: {}
@@ -212,9 +194,7 @@ struct UDPServerAccumulationTests {
             gridWidth: 64,
             gridHeight: 64,
             onPixelUpdate: { image in
-                Task {
-                    await tracker.recordUpdate(image)
-                }
+                await tracker.recordUpdate(image)
             },
             onError: { _ in },
             onReady: {}
@@ -232,7 +212,7 @@ struct UDPServerAccumulationTests {
 
         await server.processPacket(layer5Packet1)
 
-        // Layer 7: first packet
+        // Layer 7: first packet (incomplete on its own layer)
         let layer7Packet1 = createPPMImage(
             width: 64,
             height: 47,
@@ -245,7 +225,22 @@ struct UDPServerAccumulationTests {
         await server.processPacket(layer7Packet1)
 
         var updates = await tracker.getUpdates()
-        #expect(updates.count == 1, "Layer 5 complete should display")
+        #expect(updates.count == 0, "Neither layer has a full grid yet")
+
+        // Finish layer 5 first — server only emits when offsetY + height >= gridHeight
+        let layer5Packet2 = createPPMImage(
+            width: 64,
+            height: 32,
+            offsetX: 0,
+            offsetY: 32,
+            layer: 5,
+            pixelCount: 64 * 32
+        )
+
+        await server.processPacket(layer5Packet2)
+
+        updates = await tracker.getUpdates()
+        #expect(updates.count == 1, "Layer 5 should display once its strips cover full height")
         #expect(updates[0].layer == 5)
 
         // Layer 7: second packet
@@ -272,9 +267,7 @@ struct UDPServerAccumulationTests {
             gridWidth: 64,
             gridHeight: 64,
             onPixelUpdate: { image in
-                Task {
-                    await tracker.recordUpdate(image)
-                }
+                await tracker.recordUpdate(image)
             },
             onError: { _ in },
             onReady: {}
@@ -323,9 +316,7 @@ struct UDPServerAccumulationTests {
             gridWidth: 320,
             gridHeight: 64,
             onPixelUpdate: { image in
-                Task {
-                    await tracker.recordUpdate(image)
-                }
+                await tracker.recordUpdate(image)
             },
             onError: { _ in },
             onReady: {}
@@ -363,9 +354,7 @@ struct UDPServerAccumulationTests {
             gridWidth: 64,
             gridHeight: 64,
             onPixelUpdate: { image in
-                Task {
-                    await tracker.recordUpdate(image)
-                }
+                await tracker.recordUpdate(image)
             },
             onError: { _ in },
             onReady: {}
@@ -431,9 +420,7 @@ struct UDPServerAccumulationTests {
             gridWidth: 64,
             gridHeight: 64,
             onPixelUpdate: { image in
-                Task {
-                    await tracker.recordUpdate(image)
-                }
+                await tracker.recordUpdate(image)
             },
             onError: { _ in },
             onReady: {}
@@ -490,9 +477,7 @@ struct UDPServerAccumulationTests {
             gridWidth: 64,
             gridHeight: 64,
             onPixelUpdate: { image in
-                Task {
-                    await tracker.recordUpdate(image)
-                }
+                await tracker.recordUpdate(image)
             },
             onError: { _ in },
             onReady: {}
@@ -527,9 +512,7 @@ struct UDPServerAccumulationTests {
             gridWidth: 320,
             gridHeight: 64,
             onPixelUpdate: { image in
-                Task {
-                    await tracker.recordUpdate(image)
-                }
+                await tracker.recordUpdate(image)
             },
             onError: { _ in },
             onReady: {}

@@ -10,7 +10,7 @@ nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: 
 actor UDPServer {
     private let gridWidth: Int
     private let gridHeight: Int
-    private let onPixelUpdate: (PPMImage) -> Void
+    private let onPixelUpdate: @Sendable (PPMImage) async -> Void
     private let onError: (String) -> Void
     private let onReady: () -> Void
     private var listener: NWListener?
@@ -23,7 +23,7 @@ actor UDPServer {
     private let packetTimeoutSeconds: TimeInterval = 1.0
 
     init(gridWidth: Int, gridHeight: Int,
-         onPixelUpdate: @escaping (PPMImage) -> Void,
+         onPixelUpdate: @escaping @Sendable (PPMImage) async -> Void,
          onError: @escaping (String) -> Void,
          onReady: @escaping () -> Void) {
         self.gridWidth = gridWidth
@@ -164,7 +164,7 @@ actor UDPServer {
         onError("Receive error: \(error.localizedDescription)")
     }
 
-    func processPacket(_ data: Data) {
+    func processPacket(_ data: Data) async {
         do {
             let image = try PPMParser.parse(data: data)
             logger.info("🔵 PACKET: size=\(image.width, privacy: .public)x\(image.height, privacy: .public) offset=(\(image.offsetX, privacy: .public),\(image.offsetY, privacy: .public)) LAYER=\(image.layer, privacy: .public) pixels=\(image.pixels.count, privacy: .public)")
@@ -217,7 +217,7 @@ actor UDPServer {
                                                 offsetX: 0, offsetY: 0, layer: layer)
                     let nonBlackCount = pixelGrid.filter { !($0.red == 0 && $0.green == 0 && $0.blue == 0) }.count
                     logger.info("🖼️ SEND layer \(layer, privacy: .public): \(self.gridWidth, privacy: .public)x\(self.gridHeight, privacy: .public) (\(nonBlackCount, privacy: .public) non-black pixels)")
-                    self.onPixelUpdate(completeImage)
+                    await self.onPixelUpdate(completeImage)
 
                     logger.debug("Layer \(layer, privacy: .public): frame complete (offset=\(image.offsetY, privacy: .public) + height=\(image.height, privacy: .public) >= gridHeight=\(self.gridHeight, privacy: .public)), resetting buffer")
                     // Reset buffer for next frame

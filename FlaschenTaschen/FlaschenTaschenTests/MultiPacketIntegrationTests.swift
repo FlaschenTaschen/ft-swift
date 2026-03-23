@@ -5,6 +5,50 @@ import Foundation
 import Testing
 @testable import FlaschenTaschen
 
+private actor ImageFrameLog {
+    private var frames: [PPMImage] = []
+
+    func append(_ image: PPMImage) {
+        frames.append(image)
+    }
+
+    func removeAll() {
+        frames.removeAll()
+    }
+
+    func count() -> Int {
+        frames.count
+    }
+
+    func frame(at index: Int) -> PPMImage {
+        frames[index]
+    }
+
+    func allFrames() -> [PPMImage] {
+        frames
+    }
+}
+
+private actor LayerSummaryLog {
+    private var rows: [(layer: Int, count: Int)] = []
+
+    func append(layer: Int, count: Int) {
+        rows.append((layer, count))
+    }
+
+    func removeAll() {
+        rows.removeAll()
+    }
+
+    func count() -> Int {
+        rows.count
+    }
+
+    func entry(at index: Int) -> (layer: Int, count: Int) {
+        rows[index]
+    }
+}
+
 struct MultiPacketIntegrationTests {
 
     // MARK: - Integration Test Scenarios
@@ -12,13 +56,13 @@ struct MultiPacketIntegrationTests {
     /// Simulates the real-world scenario: Python tool sends 64×64 image split into 2 UDP packets
     @Test
     func testPython64x64ImageScenario() async throws {
-        var displayedFrames: [PPMImage] = []
+        let log = ImageFrameLog()
 
         let server = UDPServer(
             gridWidth: 64,
             gridHeight: 64,
             onPixelUpdate: { image in
-                displayedFrames.append(image)
+                await log.append(image)
             },
             onError: { _ in },
             onReady: {}
@@ -38,7 +82,7 @@ struct MultiPacketIntegrationTests {
         await server.processPacket(packet1)
 
         // After packet 1: nothing should be displayed yet
-        #expect(displayedFrames.count == 0, "Incomplete frame should not display after packet 1")
+        #expect(await log.count() == 0, "Incomplete frame should not display after packet 1")
 
         // PACKET 2: Second part of 64×64 image
         // Header: P6, 64×17, #FT: 0 47 7, 255
@@ -54,37 +98,38 @@ struct MultiPacketIntegrationTests {
         await server.processPacket(packet2)
 
         // After packet 2: complete frame should be displayed
-        #expect(displayedFrames.count == 1, "Complete frame should display after packet 2")
-        #expect(displayedFrames[0].width == 64)
-        #expect(displayedFrames[0].height == 64)
-        #expect(displayedFrames[0].layer == 7)
+        #expect(await log.count() == 1, "Complete frame should display after packet 2")
+        let frame0 = await log.frame(at: 0)
+        #expect(frame0.width == 64)
+        #expect(frame0.height == 64)
+        #expect(frame0.layer == 7)
 
         // Verify all pixels are present
-        let pixelCount = displayedFrames[0].pixels.count
+        let pixelCount = frame0.pixels.count
         #expect(pixelCount == 4096, "Complete 64×64 frame should have 4096 pixels")
 
         // Count non-black pixels (all should be red from our packets)
-        let nonBlackCount = displayedFrames[0].pixels.filter { !($0.red == 0 && $0.green == 0 && $0.blue == 0) }.count
+        let nonBlackCount = frame0.pixels.filter { !($0.red == 0 && $0.green == 0 && $0.blue == 0) }.count
         #expect(nonBlackCount == 4096, "All pixels should be red (from accumulated packets)")
     }
 
     /// Test that layer metadata is preserved correctly through packet accumulation
     @Test
     func testLayerMetadataPreservation() async throws {
-        var displayedFrames: [(layer: Int, count: Int)] = []
+        let log = LayerSummaryLog()
 
         let server = UDPServer(
             gridWidth: 64,
             gridHeight: 64,
             onPixelUpdate: { image in
-                displayedFrames.append((layer: image.layer, count: image.pixels.count))
+                await log.append(layer: image.layer, count: image.pixels.count)
             },
             onError: { _ in },
             onReady: {}
         )
 
         for layer in [3, 7, 15] {
-            displayedFrames.removeAll()
+            await log.removeAll()
 
             // Packet 1
             var p1 = "P6\n".data(using: .ascii)!
@@ -96,7 +141,7 @@ struct MultiPacketIntegrationTests {
             }
 
             await server.processPacket(p1)
-            #expect(displayedFrames.count == 0, "Packet 1 should not display for layer \(layer)")
+            #expect(await log.count() == 0, "Packet 1 should not display for layer \(layer)")
 
             // Packet 2
             var p2 = "P6\n".data(using: .ascii)!
@@ -108,21 +153,22 @@ struct MultiPacketIntegrationTests {
             }
 
             await server.processPacket(p2)
-            #expect(displayedFrames.count == 1, "Complete frame should display for layer \(layer)")
-            #expect(displayedFrames[0].layer == layer, "Layer should be \(layer)")
+            #expect(await log.count() == 1, "Complete frame should display for layer \(layer)")
+            let entry = await log.entry(at: 0)
+            #expect(entry.layer == layer, "Layer should be \(layer)")
         }
     }
 
     /// Test that offsets are correctly applied when pixels are accumulated
     @Test
     func testOffsetAccuracy() async throws {
-        var displayedFrames: [PPMImage] = []
+        let log = ImageFrameLog()
 
         let server = UDPServer(
             gridWidth: 128,
             gridHeight: 64,
             onPixelUpdate: { image in
-                displayedFrames.append(image)
+                await log.append(image)
             },
             onError: { _ in },
             onReady: {}
@@ -151,11 +197,11 @@ struct MultiPacketIntegrationTests {
         await server.processPacket(img2)
 
         // Both should have displayed
-        #expect(displayedFrames.count == 2)
+        #expect(await log.count() == 2)
 
         // Verify accumulated pixels have correct colors in correct positions
-        let frame1 = displayedFrames[0]
-        let frame2 = displayedFrames[1]
+        let frame1 = await log.frame(at: 0)
+        let frame2 = await log.frame(at: 1)
 
         #expect(frame1.layer == 1)
         #expect(frame2.layer == 2)
@@ -166,13 +212,13 @@ struct MultiPacketIntegrationTests {
     /// Test sequence: incomplete frame → timeout → new frame
     @Test
     func testTimeoutResetsBetweenFrames() async throws {
-        var displayedFrames: [PPMImage] = []
+        let log = ImageFrameLog()
 
         let server = UDPServer(
             gridWidth: 64,
             gridHeight: 64,
             onPixelUpdate: { image in
-                displayedFrames.append(image)
+                await log.append(image)
             },
             onError: { _ in },
             onReady: {}
@@ -188,7 +234,7 @@ struct MultiPacketIntegrationTests {
         }
 
         await server.processPacket(incomplete)
-        #expect(displayedFrames.count == 0, "Incomplete frame should not display")
+        #expect(await log.count() == 0, "Incomplete frame should not display")
 
         // Simulate timeout by sending new frame with offset 0
         // This should reset the buffer for the incomplete frame
@@ -201,20 +247,21 @@ struct MultiPacketIntegrationTests {
         }
 
         await server.processPacket(newFrame)
-        #expect(displayedFrames.count == 1, "Complete frame should display")
-        #expect(displayedFrames[0].layer == 7)
+        #expect(await log.count() == 1, "Complete frame should display")
+        let frame0 = await log.frame(at: 0)
+        #expect(frame0.layer == 7)
     }
 
     /// Test rapid multi-layer updates
     @Test
     func testRapidMultiLayerUpdates() async throws {
-        var displayedFrames: [PPMImage] = []
+        let log = ImageFrameLog()
 
         let server = UDPServer(
             gridWidth: 64,
             gridHeight: 64,
             onPixelUpdate: { image in
-                displayedFrames.append(image)
+                await log.append(image)
             },
             onError: { _ in },
             onReady: {}
@@ -246,23 +293,24 @@ struct MultiPacketIntegrationTests {
         }
 
         // All 3 layers should have complete frames
-        #expect(displayedFrames.count == 3)
+        #expect(await log.count() == 3)
 
         // Verify they're from different layers
-        let layers = Set(displayedFrames.map { $0.layer })
+        let all = await log.allFrames()
+        let layers = Set(all.map { $0.layer })
         #expect(layers == [1, 2, 3])
     }
 
     /// Test that pixels accumulate correctly at grid positions
     @Test
     func testPixelPositionAccuracy() async throws {
-        var displayedFrames: [PPMImage] = []
+        let log = ImageFrameLog()
 
         let server = UDPServer(
             gridWidth: 64,
             gridHeight: 64,
             onPixelUpdate: { image in
-                displayedFrames.append(image)
+                await log.append(image)
             },
             onError: { _ in },
             onReady: {}
@@ -289,8 +337,8 @@ struct MultiPacketIntegrationTests {
         await server.processPacket(top)
         await server.processPacket(bottom)
 
-        #expect(displayedFrames.count == 1)
-        let frame = displayedFrames[0]
+        #expect(await log.count() == 1)
+        let frame = await log.frame(at: 0)
 
         // Verify dimensions
         #expect(frame.width == 64)

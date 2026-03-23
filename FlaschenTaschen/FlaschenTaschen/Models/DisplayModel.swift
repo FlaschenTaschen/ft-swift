@@ -106,9 +106,10 @@ final class DisplayModel {
             gridWidth: gridWidth,
             gridHeight: gridHeight,
             onPixelUpdate: { [weak self] image in
-                Task { @MainActor in
-                    self?.applyLayerUpdate(image: image)
-                    self?.packetsReceived += 1
+                await MainActor.run {
+                    guard let self else { return }
+                    self.applyLayerUpdate(image: image)
+                    self.packetsReceived += 1
                 }
             },
             onError: { [weak self] error in
