@@ -13,16 +13,14 @@ struct SendText {
         // Ignore SIGPIPE to handle broken UDP connections gracefully
         signal(SIGPIPE, SIG_IGN)
 
-        let commandArgs = ArgumentPreprocessor.preprocess(args: CommandLine.arguments)
+        let (args, remainingArgs) = parseTextArguments(CommandLine.arguments)
 
         // Log raw command-line arguments
-        logger.debug("Command-line arguments: \(commandArgs, privacy: .public)")
-
-        let (args, remainingArgs) = parseTextArguments(commandArgs)
+        logger.debug("Command-line arguments: \(CommandLine.arguments, privacy: .public)")
 
         // Validate font path
         guard var fontPath = args.fontPath else {
-            printUsage(programName: commandArgs.first ?? "send-text")
+            printUsage(programName: CommandLine.arguments.first ?? "send-text")
             exit(1)
         }
 
@@ -37,13 +35,13 @@ struct SendText {
         }
 
         // Determine actual height if not specified
-        var actualHeight = args.geometry.height
+        var actualHeight = args.standardOptions.height
         if actualHeight < 0 {
             actualHeight = args.verticalMode ? 35 : font.fontHeight()
         }
 
         // Determine actual width if not specified
-        var actualWidth = args.geometry.width
+        var actualWidth = args.standardOptions.width
         if actualWidth < 0 {
             // 87 is ASCII code for 'W'
             actualWidth = args.verticalMode ? max(1, font.characterWidth(87)) : 45
@@ -75,12 +73,12 @@ struct SendText {
 
         if text.isEmpty {
             logger.error("No text provided")
-            printUsage(programName: commandArgs.first ?? "send-text")
+            printUsage(programName: CommandLine.arguments.first ?? "send-text")
             exit(1)
         }
 
         // Connect to display
-        let fd = openFlaschenTaschenSocket(hostname: args.hostname)
+        let fd = openFlaschenTaschenSocket(hostname: args.standardOptions.hostname)
         guard fd >= 0 else {
             logger.error("Failed to connect to display")
             exit(1)
@@ -88,7 +86,7 @@ struct SendText {
 
         // Create display canvas
         let canvas = UDPFlaschenTaschen(fileDescriptor: fd, width: actualWidth, height: actualHeight)
-        canvas.setOffset(x: args.geometry.offsetX, y: args.geometry.offsetY, z: args.geometry.layer)
+        canvas.setOffset(x: args.standardOptions.xoff, y: args.standardOptions.yoff, z: args.standardOptions.layer)
 
         // Update args with actual text
         var finalArgs = args

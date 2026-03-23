@@ -13,16 +13,14 @@ struct SendImage {
         // Ignore SIGPIPE to handle broken UDP connections gracefully
         signal(SIGPIPE, SIG_IGN)
 
-        let commandArgs = ArgumentPreprocessor.preprocess(args: CommandLine.arguments)
+        let args = parseImageArguments(CommandLine.arguments)
 
         // Log raw command-line arguments
-        logger.debug("Command-line arguments: \(commandArgs, privacy: .public)")
-
-        let (args, remainingArgs) = parseImageArguments(commandArgs)
+        logger.debug("Command-line arguments: \(CommandLine.arguments, privacy: .public)")
 
         // Handle clear-only mode
         if args.clearOnly {
-            let fd = openFlaschenTaschenSocket(hostname: args.hostname)
+            let fd = openFlaschenTaschenSocket(hostname: args.standardOptions.hostname)
             guard fd >= 0 else {
                 logger.error("Failed to connect to display")
                 exit(1)
@@ -30,8 +28,8 @@ struct SendImage {
 
             let canvas = UDPFlaschenTaschen(
                 fileDescriptor: fd,
-                width: args.geometry.width,
-                height: args.geometry.height
+                width: args.standardOptions.width,
+                height: args.standardOptions.height
             )
             canvas.clear()
             canvas.send()
@@ -40,9 +38,9 @@ struct SendImage {
         }
 
         // Get image file from arguments
-        let imageFile = args.imageFile ?? (remainingArgs.first ?? "")
+        let imageFile = args.imageFile ?? ""
         guard !imageFile.isEmpty else {
-            printUsage(programName: commandArgs.first ?? "send-image")
+            printUsage(programName: CommandLine.arguments.first ?? "send-image")
             exit(1)
         }
 
@@ -53,7 +51,7 @@ struct SendImage {
         }
 
         // Connect to display
-        let fd = openFlaschenTaschenSocket(hostname: args.hostname)
+        let fd = openFlaschenTaschenSocket(hostname: args.standardOptions.hostname)
         guard fd >= 0 else {
             logger.error("Failed to connect to display")
             exit(1)
@@ -62,14 +60,14 @@ struct SendImage {
         // Create display canvas
         let canvas = UDPFlaschenTaschen(
             fileDescriptor: fd,
-            width: args.geometry.width,
-            height: args.geometry.height
+            width: args.standardOptions.width,
+            height: args.standardOptions.height
         )
-        logger.info("Setting canvas offset: x=\(args.geometry.offsetX, privacy: .public), y=\(args.geometry.offsetY, privacy: .public), layer=\(args.geometry.layer, privacy: .public)")
+        logger.info("Setting canvas offset: x=\(args.standardOptions.xoff, privacy: .public), y=\(args.standardOptions.yoff, privacy: .public), layer=\(args.standardOptions.layer, privacy: .public)")
         canvas.setOffset(
-            x: args.geometry.offsetX,
-            y: args.geometry.offsetY,
-            z: args.geometry.layer
+            x: args.standardOptions.xoff,
+            y: args.standardOptions.yoff,
+            z: args.standardOptions.layer
         )
 
         // Set up signal handling
@@ -78,7 +76,7 @@ struct SendImage {
         signalSource.setEventHandler {
             logger.info("Received SIGINT, clearing display and exiting")
             // Don't let leftovers cover up content (only clear if not on layer 0)
-            if args.geometry.layer > 0 {
+            if args.standardOptions.layer > 0 {
                 canvas.clear()
                 canvas.send()
             }
@@ -91,7 +89,7 @@ struct SendImage {
         signalSourceTerm.setEventHandler {
             logger.info("Received SIGTERM, clearing display and exiting")
             // Don't let leftovers cover up content (only clear if not on layer 0)
-            if args.geometry.layer > 0 {
+            if args.standardOptions.layer > 0 {
                 canvas.clear()
                 canvas.send()
             }

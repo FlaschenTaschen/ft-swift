@@ -9,10 +9,10 @@ nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: 
 actor VideoDisplayController {
     private let canvas: UDPFlaschenTaschen
     private let frameReader: VideoFrameReader
-    private let args: VideoCommandLineArgs
+    private let args: VideoArgs
     private var shouldStop = false
 
-    init(canvas: UDPFlaschenTaschen, frameReader: VideoFrameReader, args: VideoCommandLineArgs) {
+    init(canvas: UDPFlaschenTaschen, frameReader: VideoFrameReader, args: VideoArgs) {
         self.canvas = canvas
         self.frameReader = frameReader
         self.args = args

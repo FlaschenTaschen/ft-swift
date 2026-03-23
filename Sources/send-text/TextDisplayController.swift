@@ -9,10 +9,10 @@ nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: 
 actor TextDisplayController {
     private let canvas: UDPFlaschenTaschen
     private let font: BDFFont
-    private let args: TextCommandLineArgs
+    private let args: TextArgs
     private var shouldStop = false
 
-    init(canvas: UDPFlaschenTaschen, font: BDFFont, args: TextCommandLineArgs) {
+    init(canvas: UDPFlaschenTaschen, font: BDFFont, args: TextArgs) {
         self.canvas = canvas
         self.font = font
         self.args = args
@@ -27,7 +27,7 @@ actor TextDisplayController {
         let height = canvas.height
 
         // Determine actual display height
-        let displayHeight = args.geometry.height > 0 ? args.geometry.height : height
+        let displayHeight = args.standardOptions.height > 0 ? args.standardOptions.height : height
 
         // Calculate Y position (vertically centered)
         let yPos = (displayHeight - font.fontHeight()) / 2 + font.fontBaseline()
@@ -46,7 +46,7 @@ actor TextDisplayController {
         }
 
         // Clear display if not scrolling forever
-        if args.geometry.layer > 0 && args.scrollDelayMs > 0 {
+        if args.standardOptions.layer > 0 && args.scrollDelayMs > 0 {
             canvas.clear()
             canvas.send()
         }

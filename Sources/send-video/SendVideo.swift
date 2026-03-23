@@ -13,18 +13,16 @@ struct SendVideo {
         // Ignore SIGPIPE to handle broken UDP connections gracefully
         signal(SIGPIPE, SIG_IGN)
 
-        let commandArgs = ArgumentPreprocessor.preprocess(args: CommandLine.arguments)
+        let (args, remainingArgs) = parseVideoArguments(CommandLine.arguments)
 
         // Log raw command-line arguments
-        logger.debug("Command-line arguments: \(commandArgs, privacy: .public)")
-
-        let (args, remainingArgs) = parseVideoArguments(commandArgs)
-        logger.debug("Parsed geometry: width=\(args.geometry.width), height=\(args.geometry.height), offsetX=\(args.geometry.offsetX), offsetY=\(args.geometry.offsetY), layer=\(args.geometry.layer)")
+        logger.debug("Command-line arguments: \(CommandLine.arguments, privacy: .public)")
+        logger.debug("Parsed geometry: width=\(args.standardOptions.width), height=\(args.standardOptions.height), offsetX=\(args.standardOptions.xoff), offsetY=\(args.standardOptions.yoff), layer=\(args.standardOptions.layer)")
 
         // Get video file from arguments
         let videoFile = args.videoFile ?? (remainingArgs.first ?? "")
         guard !videoFile.isEmpty else {
-            printUsage(programName: commandArgs.first ?? "send-video")
+            printUsage(programName: CommandLine.arguments.first ?? "send-video")
             exit(1)
         }
 
@@ -43,7 +41,7 @@ struct SendVideo {
         logger.info("Loaded video: \(videoFile, privacy: .public), \(videoReader.originalWidth, privacy: .public)x\(videoReader.originalHeight, privacy: .public), fps: \(videoReader.frameRate, privacy: .public), duration: \(videoReader.durationSeconds, privacy: .public)s")
 
         // Connect to display
-        let fd = openFlaschenTaschenSocket(hostname: args.hostname)
+        let fd = openFlaschenTaschenSocket(hostname: args.standardOptions.hostname)
         guard fd >= 0 else {
             logger.error("Failed to connect to display")
             exit(1)
@@ -52,14 +50,14 @@ struct SendVideo {
         // Create display canvas
         let canvas = UDPFlaschenTaschen(
             fileDescriptor: fd,
-            width: args.geometry.width,
-            height: args.geometry.height
+            width: args.standardOptions.width,
+            height: args.standardOptions.height
         )
-        logger.info("Setting canvas offset: x=\(args.geometry.offsetX, privacy: .public), y=\(args.geometry.offsetY, privacy: .public), layer=\(args.geometry.layer, privacy: .public)")
+        logger.info("Setting canvas offset: x=\(args.standardOptions.xoff, privacy: .public), y=\(args.standardOptions.yoff, privacy: .public), layer=\(args.standardOptions.layer, privacy: .public)")
         canvas.setOffset(
-            x: args.geometry.offsetX,
-            y: args.geometry.offsetY,
-            z: args.geometry.layer
+            x: args.standardOptions.xoff,
+            y: args.standardOptions.yoff,
+            z: args.standardOptions.layer
         )
 
         // Set up signal handling

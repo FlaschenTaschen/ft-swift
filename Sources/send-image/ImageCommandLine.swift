@@ -6,9 +6,8 @@ import os.log
 
 nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: "ImageCommandLine")
 
-struct ImageCommandLineArgs {
-    var geometry: (width: Int, height: Int, offsetX: Int, offsetY: Int, layer: Int)
-    var hostname: String?
+struct ImageArgs {
+    var standardOptions: StandardOptions
     var imageFile: String?
     var scrollDelayMs: Int
     var brightness: UInt8
@@ -17,152 +16,87 @@ struct ImageCommandLineArgs {
     var clearOnly: Bool
 }
 
-nonisolated func parseImageArguments(_ args: [String]) -> (ImageCommandLineArgs, [String]) {
-    var result = ImageCommandLineArgs(
-        geometry: (width: 45, height: 35, offsetX: 0, offsetY: 0, layer: 0),
-        hostname: nil,
-        imageFile: nil,
-        scrollDelayMs: 0,
-        brightness: 100,
-        centerImage: false,
-        timeoutSeconds: nil,
-        clearOnly: false
-    )
-
-    var i = 1  // Skip program name
-    var remainingArgs: [String] = []
-
-    while i < args.count {
-        let arg = args[i]
-
-        if arg.hasPrefix("-") && arg != "-" {
-            let flag = String(arg.dropFirst())
-
-            switch flag {
-            case let f where f.hasPrefix("g"):
-                let value = String(flag.dropFirst())
-                if parseGeometry(value, into: &result.geometry) {
-                    i += 1
-                } else {
-                    i += 1
-                    if i < args.count {
-                        _ = parseGeometry(args[i], into: &result.geometry)
-                        i += 1
-                    }
-                }
-
-            case let f where f.hasPrefix("h"):
-                let value = String(flag.dropFirst())
-                if value.isEmpty {
-                    i += 1
-                    if i < args.count {
-                        result.hostname = args[i]
-                        i += 1
-                    }
-                } else {
-                    result.hostname = value
-                    i += 1
-                }
-
-            case let f where f.hasPrefix("s"):
-                let value = String(flag.dropFirst())
-                if value.isEmpty {
-                    i += 1
-                    if i < args.count {
-                        result.scrollDelayMs = Int(args[i]) ?? 50
-                        i += 1
-                    }
-                } else {
-                    var delayMs = Int(value) ?? 50
-                    if delayMs < 0 {
-                        delayMs = -delayMs
-                    }
-                    if delayMs > 0 && delayMs < 10 {
-                        delayMs = 10
-                    }
-                    result.scrollDelayMs = delayMs
-                    i += 1
-                }
-
-            case let f where f.hasPrefix("b"):
-                let value = String(flag.dropFirst())
-                let brightnessStr: String
-                if value.isEmpty {
-                    i += 1
-                    if i < args.count {
-                        brightnessStr = args[i]
-                        i += 1
-                    } else {
-                        i += 1
-                        continue
-                    }
-                } else {
-                    brightnessStr = value
-                    i += 1
-                }
-
-                if let brightness = UInt8(brightnessStr) {
-                    result.brightness = min(100, brightness)
-                }
-
-            case let f where f.hasPrefix("t"):
-                let value = String(flag.dropFirst())
-                let timeoutStr: String
-                if value.isEmpty {
-                    i += 1
-                    if i < args.count {
-                        timeoutStr = args[i]
-                        i += 1
-                    } else {
-                        i += 1
-                        continue
-                    }
-                } else {
-                    timeoutStr = value
-                    i += 1
-                }
-
-                if let timeout = Int(timeoutStr) {
-                    result.timeoutSeconds = timeout
-                }
-
-            case let f where f.hasPrefix("l"):
-                let value = String(flag.dropFirst())
-                if value.isEmpty {
-                    i += 1
-                    if i < args.count {
-                        if let layer = Int(args[i]), layer >= 0 && layer < 16 {
-                            result.geometry.layer = layer
-                        }
-                        i += 1
-                    }
-                } else {
-                    if let layer = Int(value), layer >= 0 && layer < 16 {
-                        result.geometry.layer = layer
-                    }
-                    i += 1
-                }
-
-            case "c":
-                result.centerImage = true
-                i += 1
-
-            case "C":
-                result.clearOnly = true
-                i += 1
-
-            default:
-                i += 1
-            }
-        } else {
-            remainingArgs.append(arg)
-            i += 1
-        }
+nonisolated func parseImageArguments(_ args: [String]) -> ImageArgs {
+    // Pre-filter boolean flags that take no value to prevent StandardOptions from consuming next arg
+    var centerImage = false
+    var clearOnly = false
+    let filteredArgs = args.filter { arg in
+        if arg == "-c" { centerImage = true; return false }
+        if arg == "-C" { clearOnly = true; return false }
+        return true
     }
 
-    logger.debug("Parsed geometry: width=\(result.geometry.width), height=\(result.geometry.height), offsetX=\(result.geometry.offsetX), offsetY=\(result.geometry.offsetY), layer=\(result.geometry.layer)")
+    // Use StandardOptions for common flags: -g, -l, -h, -t, -d
+    var standardOptions = StandardOptions(args: filteredArgs)
 
-    return (result, remainingArgs)
+    // Override defaults from StandardOptions to match send-image behavior
+    // (SendImage traditionally defaults layer to 0, not 1)
+    if standardOptions.layer == 1 && !filteredArgs.contains("-l") {
+        standardOptions.layer = 0
+    }
+
+    // Check if -t was explicitly provided to preserve timeout behavior
+    let hasExplicitTimeout = args.contains { $0 == "-t" || $0.hasPrefix("-t") }
+
+    // Parse send-image-specific flags from nonStandardArgs
+    var scrollDelayMs = 0
+    var brightness: UInt8 = 100
+    var imageFile: String? = nil
+    var timeoutSeconds: Int? = nil
+
+    var i = 0
+    while i < standardOptions.nonStandardArgs.count {
+        let arg = standardOptions.nonStandardArgs[i]
+
+        if arg == "-s" {
+            i += 1
+            if i < standardOptions.nonStandardArgs.count, let ms = Int(standardOptions.nonStandardArgs[i]) {
+                var delayMs = ms
+                if delayMs < 0 {
+                    delayMs = -delayMs
+                }
+                if delayMs > 0 && delayMs < 10 {
+                    delayMs = 10
+                }
+                scrollDelayMs = delayMs
+            } else {
+                scrollDelayMs = 50
+            }
+        } else if arg == "-b" {
+            i += 1
+            if i < standardOptions.nonStandardArgs.count, let b = UInt8(standardOptions.nonStandardArgs[i]) {
+                brightness = min(100, b)
+            }
+        } else if arg == "-t" {
+            i += 1
+            if i < standardOptions.nonStandardArgs.count, let t = Int(standardOptions.nonStandardArgs[i]) {
+                timeoutSeconds = t
+            }
+        } else if !arg.hasPrefix("-") {
+            imageFile = arg
+        }
+        i += 1
+    }
+
+    // Preserve timeout behavior: nil means no timeout (run forever)
+    if !hasExplicitTimeout {
+        timeoutSeconds = nil
+    } else if timeoutSeconds == nil {
+        // -t was provided but without valid value, use StandardOptions timeout
+        timeoutSeconds = Int(standardOptions.timeout)
+    }
+
+    logger.debug("Parsed image args: geometry=\(standardOptions.width)x\(standardOptions.height)+\(standardOptions.xoff)+\(standardOptions.yoff) layer=\(standardOptions.layer)")
+
+    return ImageArgs(
+        standardOptions: standardOptions,
+        imageFile: imageFile,
+        scrollDelayMs: scrollDelayMs,
+        brightness: brightness,
+        centerImage: centerImage,
+        timeoutSeconds: timeoutSeconds,
+        clearOnly: clearOnly
+    )
 }
 
 private nonisolated func parseGeometry(_ spec: String, into geo: inout (width: Int, height: Int, offsetX: Int, offsetY: Int, layer: Int)) -> Bool {

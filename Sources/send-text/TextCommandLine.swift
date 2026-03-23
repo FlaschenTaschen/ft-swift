@@ -3,9 +3,8 @@
 import Foundation
 import FlaschenTaschenClientKit
 
-struct TextCommandLineArgs {
-    var geometry: (width: Int, height: Int, offsetX: Int, offsetY: Int, layer: Int)
-    var hostname: String?
+struct TextArgs {
+    var standardOptions: StandardOptions
     var fontPath: String?
     var textInput: String?
     var scrollDelayMs: Int
@@ -18,194 +17,109 @@ struct TextCommandLineArgs {
     var text: String = ""
 }
 
-nonisolated func parseTextArguments(_ args: [String]) -> (TextCommandLineArgs, [String]) {
-    var result = TextCommandLineArgs(
-        geometry: (width: 45, height: -1, offsetX: 0, offsetY: 0, layer: 1),
-        hostname: nil,
-        fontPath: nil,
-        textInput: nil,
-        scrollDelayMs: 50,
-        letterSpacing: 0,
-        textColor: Color(r: 255, g: 255, b: 255),
-        backgroundColor: Color(r: 0, g: 0, b: 0),
-        outlineColor: nil,
-        verticalMode: false,
-        runOnce: false
-    )
+// Renamed for clarity - returns TextArgs and remaining text arguments
+nonisolated func parseTextArguments(_ args: [String]) -> (TextArgs, [String]) {
+    // Pre-filter boolean flags that take no value to prevent StandardOptions from consuming next arg
+    var verticalMode = false
+    var runOnce = false
+    let filteredArgs = args.filter { arg in
+        if arg == "-v" { verticalMode = true; return false }
+        if arg == "-O" { runOnce = true; return false }
+        return true
+    }
 
-    var i = 1  // Skip program name
-    var remainingArgs: [String] = []
+    // Use StandardOptions for common flags: -g, -l, -h, -t, -d
+    let standardOptions = StandardOptions(args: filteredArgs)
 
-    while i < args.count {
-        let arg = args[i]
+    // Parse send-text-specific flags from nonStandardArgs
+    var fontPath: String? = nil
+    var textInput: String? = nil
+    var scrollDelayMs = 50
+    var letterSpacing = 0
+    var textColor = Color(r: 255, g: 255, b: 255)
+    var backgroundColor = Color(r: 0, g: 0, b: 0)
+    var outlineColor: Color? = nil
+    var textArgs: [String] = []
 
-        if arg.hasPrefix("-") && arg != "-" {
-            let flag = String(arg.dropFirst())
+    var i = 0
+    while i < standardOptions.nonStandardArgs.count {
+        let arg = standardOptions.nonStandardArgs[i]
 
-            switch flag {
-            case let f where f.hasPrefix("g"):
-                let value = String(flag.dropFirst())
-                if parseGeometry(value, into: &result.geometry) {
-                    i += 1
-                } else {
-                    i += 1
-                    if i < args.count {
-                        _ = parseGeometry(args[i], into: &result.geometry)
-                        i += 1
-                    }
-                }
-
-            case let f where f.hasPrefix("h"):
-                let value = String(flag.dropFirst())
-                if value.isEmpty {
-                    i += 1
-                    if i < args.count {
-                        result.hostname = args[i]
-                        i += 1
-                    }
-                } else {
-                    result.hostname = value
-                    i += 1
-                }
-
-            case let f where f.hasPrefix("f"):
-                let value = String(flag.dropFirst())
-                if value.isEmpty {
-                    i += 1
-                    if i < args.count {
-                        result.fontPath = args[i]
-                        i += 1
-                    }
-                } else {
-                    result.fontPath = value
-                    i += 1
-                }
-
-            case let f where f.hasPrefix("i"):
-                let value = String(flag.dropFirst())
-                if value.isEmpty {
-                    i += 1
-                    if i < args.count {
-                        result.textInput = args[i]
-                        i += 1
-                    }
-                } else {
-                    result.textInput = value
-                    i += 1
-                }
-
-            case let f where f.hasPrefix("s"):
-                let value = String(flag.dropFirst())
-                if value.isEmpty {
-                    i += 1
-                    if i < args.count {
-                        result.scrollDelayMs = Int(args[i]) ?? 50
-                        i += 1
-                    }
-                } else {
-                    var delayMs = Int(value) ?? 50
-                    if delayMs < 0 {
-                        delayMs = -delayMs
-                    }
-                    if delayMs > 0 && delayMs < 10 {
-                        delayMs = 10
-                    }
-                    result.scrollDelayMs = delayMs
-                    i += 1
-                }
-
-            case let f where f.hasPrefix("S"):
-                let value = String(flag.dropFirst())
-                if value.isEmpty {
-                    i += 1
-                    if i < args.count {
-                        result.letterSpacing = Int(args[i]) ?? 0
-                        i += 1
-                    }
-                } else {
-                    result.letterSpacing = Int(value) ?? 0
-                    i += 1
-                }
-
-            case let f where f.hasPrefix("c"):
-                let value = String(flag.dropFirst())
-                if value.isEmpty {
-                    i += 1
-                    if i < args.count {
-                        _ = parseColor(args[i], into: &result.textColor)
-                        i += 1
-                    }
-                } else {
-                    _ = parseColor(value, into: &result.textColor)
-                    i += 1
-                }
-
-            case let f where f.hasPrefix("b"):
-                let value = String(flag.dropFirst())
-                if value.isEmpty {
-                    i += 1
-                    if i < args.count {
-                        _ = parseColor(args[i], into: &result.backgroundColor)
-                        i += 1
-                    }
-                } else {
-                    _ = parseColor(value, into: &result.backgroundColor)
-                    i += 1
-                }
-
-            case let f where f.hasPrefix("o"):
-                let value = String(flag.dropFirst())
-                var outlineColor = Color()
-                if value.isEmpty {
-                    i += 1
-                    if i < args.count {
-                        if parseColor(args[i], into: &outlineColor) {
-                            result.outlineColor = outlineColor
-                        }
-                        i += 1
-                    }
-                } else {
-                    if parseColor(value, into: &outlineColor) {
-                        result.outlineColor = outlineColor
-                    }
-                    i += 1
-                }
-
-            case let f where f.hasPrefix("l"):
-                let value = String(flag.dropFirst())
-                if value.isEmpty {
-                    i += 1
-                    if i < args.count {
-                        if let layer = Int(args[i]), layer >= 0 && layer < 16 {
-                            result.geometry.layer = layer
-                        }
-                        i += 1
-                    }
-                } else {
-                    if let layer = Int(value), layer >= 0 && layer < 16 {
-                        result.geometry.layer = layer
-                    }
-                    i += 1
-                }
-
-            case "O":
-                result.runOnce = true
-                i += 1
-
-            case "v":
-                result.verticalMode = true
-                i += 1
-
-            default:
+        if arg == "-f" {
+            i += 1
+            if i < standardOptions.nonStandardArgs.count {
+                fontPath = standardOptions.nonStandardArgs[i]
                 i += 1
             }
+        } else if arg == "-i" {
+            i += 1
+            if i < standardOptions.nonStandardArgs.count {
+                textInput = standardOptions.nonStandardArgs[i]
+                i += 1
+            }
+        } else if arg == "-s" {
+            i += 1
+            if i < standardOptions.nonStandardArgs.count, let ms = Int(standardOptions.nonStandardArgs[i]) {
+                var delayMs = ms
+                if delayMs < 0 {
+                    delayMs = -delayMs
+                }
+                if delayMs > 0 && delayMs < 10 {
+                    delayMs = 10
+                }
+                scrollDelayMs = delayMs
+                i += 1
+            } else {
+                scrollDelayMs = 50
+            }
+        } else if arg == "-S" {
+            i += 1
+            if i < standardOptions.nonStandardArgs.count, let ls = Int(standardOptions.nonStandardArgs[i]) {
+                letterSpacing = ls
+                i += 1
+            }
+        } else if arg == "-c" {
+            i += 1
+            if i < standardOptions.nonStandardArgs.count {
+                _ = parseColor(standardOptions.nonStandardArgs[i], into: &textColor)
+                i += 1
+            }
+        } else if arg == "-b" {
+            i += 1
+            if i < standardOptions.nonStandardArgs.count {
+                _ = parseColor(standardOptions.nonStandardArgs[i], into: &backgroundColor)
+                i += 1
+            }
+        } else if arg == "-o" {
+            i += 1
+            if i < standardOptions.nonStandardArgs.count {
+                var outlineCol = Color()
+                if parseColor(standardOptions.nonStandardArgs[i], into: &outlineCol) {
+                    outlineColor = outlineCol
+                }
+                i += 1
+            }
+        } else if !arg.hasPrefix("-") {
+            textArgs.append(arg)
+            i += 1
         } else {
-            remainingArgs.append(arg)
             i += 1
         }
     }
 
-    return (result, remainingArgs)
+    let textArgsResult = TextArgs(
+        standardOptions: standardOptions,
+        fontPath: fontPath,
+        textInput: textInput,
+        scrollDelayMs: scrollDelayMs,
+        letterSpacing: letterSpacing,
+        textColor: textColor,
+        backgroundColor: backgroundColor,
+        outlineColor: outlineColor,
+        verticalMode: verticalMode,
+        runOnce: runOnce
+    )
+    return (textArgsResult, textArgs)
 }
 
 private nonisolated func parseGeometry(_ spec: String, into geo: inout (width: Int, height: Int, offsetX: Int, offsetY: Int, layer: Int)) -> Bool {

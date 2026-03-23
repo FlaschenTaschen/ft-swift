@@ -9,10 +9,10 @@ nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: 
 actor ImageDisplayController {
     private let canvas: UDPFlaschenTaschen
     private let imageData: ImageData
-    private let args: ImageCommandLineArgs
+    private let args: ImageArgs
     private var shouldStop = false
 
-    init(canvas: UDPFlaschenTaschen, imageData: ImageData, args: ImageCommandLineArgs) {
+    init(canvas: UDPFlaschenTaschen, imageData: ImageData, args: ImageArgs) {
         self.canvas = canvas
         self.imageData = imageData
         self.args = args
