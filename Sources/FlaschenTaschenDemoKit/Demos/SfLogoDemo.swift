@@ -6,77 +6,8 @@ import os.log
 
 nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: "sf-logo")
 
-private let SF_LOGO_WIDTH = 24
-private let SF_LOGO_HEIGHT = 34
-
-// SVG to pixel scale factors
-// SVG viewBox: 11.811159 × 16.708437 → 24 × 34 pixels
-private let SVG_SCALE_X = 24.0 / 11.811159
-private let SVG_SCALE_Y = 34.0 / 16.708437
-private let SVG_OFFSET_X = 99.218739  // Layer translate offset
-private let SVG_OFFSET_Y = 140.22917
-
-// Helper function to apply SVG transform
-private func applyTransform(_ points: [(Double, Double)], a: Double, e: Double, f: Double) -> [(Double, Double)] {
-    return points.map { (x, y) in
-        let tx = a * x + e
-        let ty = a * y + f
-        return (tx, ty)
-    }
-}
-
-// Trunk lines (3 horizontal lines in lower section)
-private let TRUNK_LINES: [((Double, Double), (Double, Double))] = [
-    ((102.42126, 155.28395), (107.13085, 155.28395)),  // Top
-    ((103.02981, 155.99834), (106.41648, 155.99834)),  // Middle
-    ((103.74419, 156.73917), (105.7021, 156.73917))    // Bottom
-]
-
-// Center vertical line
-private let CENTER_LINE = ((106.7869, 143.45709), (106.7869, 147.5052))
-
-// Canopy outline - approximated from SVG bezier path
-// Simplified as connected line segments following the organic shape (open path, clean right edge)
-private let CANOPY_OUTLINE: [(Double, Double)] = [
-    (100.83, 143.74),   // Center bottom of canopy
-    (99.72, 142.89),    // Left curve
-    (99.51, 142.17),    // Left upper
-    (99.65, 141.31),    // Left top bulge
-    (100.08, 140.73),   // Upper left node area
-    (101.48, 139.84),   // Upper left to center
-    (102.85, 139.52),   // Upper center left
-    (104.65, 139.34),   // Top center
-    (106.30, 139.23),   // Upper center right
-    (107.69, 139.78),   // Upper right
-    (108.69, 141.06),   // Right side
-    (108.85, 142.39)    // Right lower (stops here, no connecting line)
-]
-
-// Branch nodes (circles)
-private let BRANCH_NODES: [(Double, Double)] = [
-    (102.5271, 147.955),      // Bottom center
-    (102.28898, 142.76917),   // Upper left
-    (104.64377, 143.66875),   // Middle
-    (106.7869, 142.92792),    // Right middle
-    (108.18919, 145.25626)    // Far right
-]
-
-// Polylines (roots and branches) with their transforms
-private let POLYLINES_WITH_TRANSFORM: [[(Double, Double)]] = [
-    // Transform: matrix(0.26458333, 0, 0, 0.26458333, 78.952727, 43.391667)
-    // Polyline 1 - right root
-    applyTransform([(99.8, 422.9), (99.8, 398.5), (110.5, 388.6), (110.5, 386.7)],
-                   a: 0.26458333, e: 78.952727, f: 43.391667),
-    // Polyline 2 - left root
-    applyTransform([(95.3, 422.9), (95.3, 393.5), (88.2, 386.7), (88.2, 377.5)],
-                   a: 0.26458333, e: 78.952727, f: 43.391667),
-    // Polyline 3 - left branch
-    applyTransform([(97.1, 381.1), (97.1, 384.3), (91.8, 390.1)],
-                   a: 0.26458333, e: 78.952727, f: 43.391667),
-    // Polyline 4 - right branch
-    applyTransform([(89.1, 397.3), (89.1, 400.2), (95.3, 406.5)],
-                   a: 0.26458333, e: 78.952727, f: 43.391667)
-]
+private let SF_LOGO_WIDTH = 40
+private let SF_LOGO_HEIGHT = 56
 
 public struct SfLogoDemo: Sendable {
     public struct Options: Sendable {
@@ -106,8 +37,8 @@ public struct SfLogoDemo: Sendable {
         let loop = AnimationLoop(timeout: options.standardOptions.timeout, delay: options.standardOptions.delay)
 
         var colorIndex = 0
-        var x = -1
-        var y = -1
+        var x = 0
+        var y = 0
         var sx = 1
         var sy = 1
         var canvas = canvas  // Make mutable copy for inout passing
@@ -125,28 +56,32 @@ public struct SfLogoDemo: Sendable {
             canvas.setOffset(x: options.standardOptions.xoff, y: options.standardOptions.yoff, z: options.standardOptions.layer)
             canvas.send()
 
-            // Animate position (move every 8 frames, like nb-logo)
+            // Animate position (move every 8 frames)
             if (colorIndex % 8) == 0 {
-                x += sx
-                if x > (options.standardOptions.width - SF_LOGO_WIDTH) {
-                    x -= sx
-                    sy = 1
-                    y += sy
-                }
-                if y > (options.standardOptions.height - SF_LOGO_HEIGHT) {
-                    y -= sy
-                    sx = -1
-                    x += sx
-                }
-                if x < -1 {
-                    x -= sx
-                    sy = -1
-                    y += sy
-                }
-                if y < -1 {
-                    y -= sy
+                // Calculate next position
+                let nextX = x + sx
+                let nextY = y + sy
+
+                // Bounce off left/right edges
+                if nextX < 0 {
+                    x = 0
                     sx = 1
-                    x += sx
+                } else if nextX + SF_LOGO_WIDTH > options.standardOptions.width {
+                    x = options.standardOptions.width - SF_LOGO_WIDTH
+                    sx = -1
+                } else {
+                    x = nextX
+                }
+
+                // Bounce off top/bottom edges
+                if nextY < 0 {
+                    y = 0
+                    sy = 1
+                } else if nextY + SF_LOGO_HEIGHT > options.standardOptions.height {
+                    y = options.standardOptions.height - SF_LOGO_HEIGHT
+                    sy = -1
+                } else {
+                    y = nextY
                 }
             }
 
@@ -154,75 +89,32 @@ public struct SfLogoDemo: Sendable {
         }
     }
 
-    // Convert SVG coordinates to pixel coordinates
-    private static func svgToPixel(_ svgX: Double, _ svgY: Double) -> (Int, Int) {
-        let x = Int((svgX - SVG_OFFSET_X) * SVG_SCALE_X + 0.5)
-        let y = Int((svgY - SVG_OFFSET_Y) * SVG_SCALE_Y + 0.5)
-        return (x, y)
-    }
-
     private static func drawTreeLogoFlat(offsetX: Int, offsetY: Int, color: Color, width: Int, height: Int, canvas: inout UDPFlaschenTaschen) {
-        let hw = width >> 1
-        let hh = height >> 1
+        // Draw logo from grayscale pixel data
+        for pixelY in 0..<SF_LOGO_GRAYSCALE.count {
+            for pixelX in 0..<SF_LOGO_GRAYSCALE[pixelY].count {
+                let grayValue = SF_LOGO_GRAYSCALE[pixelY][pixelX]
 
-        // Helper to apply offset and bounds checking
-        func screenPos(_ px: Int, _ py: Int) -> (Int, Int) {
-            let sx = offsetX + px + hw - (LOGO_WIDTH / 2)
-            let sy = offsetY + py + hh - (LOGO_HEIGHT / 2)
-            return (sx, sy)
-        }
+                // Skip white pixels (background)
+                if grayValue >= 240 {
+                    continue
+                }
 
-        // Draw canopy outline (organic shape at top)
-        for i in 0..<(CANOPY_OUTLINE.count - 1) {
-            let (x0, y0) = svgToPixel(CANOPY_OUTLINE[i].0, CANOPY_OUTLINE[i].1)
-            let (x1, y1) = svgToPixel(CANOPY_OUTLINE[i + 1].0, CANOPY_OUTLINE[i + 1].1)
-            let (sx0, sy0) = screenPos(x0, y0)
-            let (sx1, sy1) = screenPos(x1, y1)
-            drawLine(x0: sx0, y0: sy0, x1: sx1, y1: sy1, color: color, width: width, height: height, canvas: &canvas)
-        }
+                // Apply color based on grayscale intensity
+                // Dark pixels (low grayscale) get full color, light pixels get darker version
+                let intensity = Float(255 - grayValue) / 255.0
+                let pixelColor = Color(
+                    r: UInt8(Float(color.r) * intensity),
+                    g: UInt8(Float(color.g) * intensity),
+                    b: UInt8(Float(color.b) * intensity)
+                )
 
-        // Draw trunk lines (3 horizontal lines)
-        for line in TRUNK_LINES {
-            let (x0, y0) = svgToPixel(line.0.0, line.0.1)
-            let (x1, y1) = svgToPixel(line.1.0, line.1.1)
-            let (sx0, sy0) = screenPos(x0, y0)
-            let (sx1, sy1) = screenPos(x1, y1)
-            drawLine(x0: sx0, y0: sy0, x1: sx1, y1: sy1, color: color, width: width, height: height, canvas: &canvas)
-        }
+                // Place pixel on canvas with logo position offset
+                let screenX = offsetX + pixelX
+                let screenY = offsetY + pixelY
 
-        // Draw center vertical line
-        let (cx0, cy0) = svgToPixel(CENTER_LINE.0.0, CENTER_LINE.0.1)
-        let (cx1, cy1) = svgToPixel(CENTER_LINE.1.0, CENTER_LINE.1.1)
-        let (scx0, scy0) = screenPos(cx0, cy0)
-        let (scx1, scy1) = screenPos(cx1, cy1)
-        drawLine(x0: scx0, y0: scy0, x1: scx1, y1: scy1, color: color, width: width, height: height, canvas: &canvas)
-
-        // Draw polylines (roots and branches)
-        for polyline in POLYLINES_WITH_TRANSFORM {
-            for i in 0..<(polyline.count - 1) {
-                let (x0, y0) = svgToPixel(polyline[i].0, polyline[i].1)
-                let (x1, y1) = svgToPixel(polyline[i + 1].0, polyline[i + 1].1)
-                let (sx0, sy0) = screenPos(x0, y0)
-                let (sx1, sy1) = screenPos(x1, y1)
-                drawLine(x0: sx0, y0: sy0, x1: sx1, y1: sy1, color: color, width: width, height: height, canvas: &canvas)
-            }
-        }
-
-        // Draw branch nodes (circles with radius 1-2 pixels)
-        let nodeRadius = 1
-        for node in BRANCH_NODES {
-            let (px, py) = svgToPixel(node.0, node.1)
-            let (sx, sy) = screenPos(px, py)
-            // Draw filled circle
-            for dy in -nodeRadius...nodeRadius {
-                for dx in -nodeRadius...nodeRadius {
-                    if dx * dx + dy * dy <= nodeRadius * nodeRadius {
-                        let x = sx + dx
-                        let y = sy + dy
-                        if x >= 0 && x < width && y >= 0 && y < height {
-                            canvas.setPixel(x: x, y: y, color: color)
-                        }
-                    }
+                if screenX >= 0 && screenX < width && screenY >= 0 && screenY < height {
+                    canvas.setPixel(x: screenX, y: screenY, color: pixelColor)
                 }
             }
         }
