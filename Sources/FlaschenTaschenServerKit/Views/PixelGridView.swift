@@ -193,6 +193,99 @@ public struct LensDistortedCircleView: View {
     }
 }
 
+public struct BitmapGridView: View {
+    @Bindable var displayModel: DisplayModel
+    @State private var renderedImage: CGImage?
+
+    public var body: some View {
+        ZStack(alignment: .center) {
+            Color(.black)
+                .ignoresSafeArea()
+
+            if let renderedImage {
+                Image(renderedImage, scale: 1.0, label: Text("Pixel Grid"))
+                    .resizable()
+                    .scaledToFit()
+                    .padding(8)
+            } else {
+                ProgressView()
+            }
+        }
+        .overlay {
+            if let error = displayModel.serverError {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.red)
+                    Text(error)
+                        .font(.body)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(20)
+                .controlBackground()
+                .cornerRadius(8)
+            }
+        }
+        .onAppear {
+            renderBitmap()
+        }
+        .onChange(of: displayModel.pixelData) {
+            renderBitmap()
+        }
+        .onChange(of: displayModel.gridWidth) {
+            renderBitmap()
+        }
+        .onChange(of: displayModel.gridHeight) {
+            renderBitmap()
+        }
+    }
+
+    private func renderBitmap() {
+        Task(priority: .userInitiated) {
+            let image = renderBitmapImage(
+                pixels: displayModel.pixelData,
+                width: displayModel.gridWidth,
+                height: displayModel.gridHeight
+            )
+            await MainActor.run {
+                self.renderedImage = image
+            }
+        }
+    }
+
+    private func renderBitmapImage(pixels: [PixelColor], width: Int, height: Int) -> CGImage? {
+        guard width > 0, height > 0 else { return nil }
+
+        let capacity = width * height * 4
+        var bytes = [UInt8](unsafeUninitializedCapacity: capacity) { buffer, count in
+            for i in 0..<min(pixels.count, width * height) {
+                let base = i * 4
+                buffer[base] = pixels[i].red
+                buffer[base + 1] = pixels[i].green
+                buffer[base + 2] = pixels[i].blue
+                buffer[base + 3] = 255
+            }
+            count = capacity
+        }
+
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue)
+
+        guard let context = CGContext(
+            data: &bytes,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width * 4,
+            space: colorSpace,
+            bitmapInfo: bitmapInfo.rawValue
+        ) else { return nil }
+
+        return context.makeImage()
+    }
+}
+
 extension View {
     @ViewBuilder
     func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {

@@ -12,7 +12,11 @@ public struct PlaneView: View {
     public var body: some View {
         #if os(tvOS)
         ZStack(alignment: .bottom) {
-            PixelGridView(displayModel: displayModel)
+            if displayModel.useCirclePixels {
+                PixelGridView(displayModel: displayModel)
+            } else {
+                BitmapGridView(displayModel: displayModel)
+            }
 
             if showTVOSControls {
                 TVOSControlsView(displayModel: displayModel, isShowing: $showTVOSControls)
@@ -40,7 +44,11 @@ public struct PlaneView: View {
         }
         #else
         ZStack(alignment: .bottomTrailing) {
-            PixelGridView(displayModel: displayModel)
+            if displayModel.useCirclePixels {
+                PixelGridView(displayModel: displayModel)
+            } else {
+                BitmapGridView(displayModel: displayModel)
+            }
 
             #if os(macOS)
             ServerPanelView(displayModel: displayModel)
