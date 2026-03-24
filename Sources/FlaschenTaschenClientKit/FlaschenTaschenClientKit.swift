@@ -28,8 +28,8 @@ public nonisolated struct Color: Equatable, Sendable {
 /// Uses @unchecked Sendable because clients use this synchronously in a single-threaded context
 public class UDPFlaschenTaschen: @unchecked Sendable {
     private let fileDescriptor: Int32
-    private let width_: Int
-    private let height_: Int
+    public let width: Int
+    public let height: Int
     private var buffer: Data
     private var pixelBufferStart: Int
     private var offsetX: Int = 0
@@ -67,8 +67,8 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
     /// Designated initializer that accepts explicit maxUDPSize (for testing and advanced use)
     public init(fileDescriptor: Int32, width: Int, height: Int, maxUDPSize: Int) {
         self.fileDescriptor = fileDescriptor
-        self.width_ = width
-        self.height_ = height
+        self.width = width
+        self.height = height
         self.maxUDPSize = maxUDPSize
 
         // Validate that at least 1 row fits in a packet
@@ -90,33 +90,25 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
         self.init(fileDescriptor: fileDescriptor, width: width, height: height, maxUDPSize: Self.getMaxUDPSize(fd: fileDescriptor))
     }
 
-    public var width: Int {
-        return width_
-    }
-
-    public var height: Int {
-        return height_
-    }
-
     public var maxPacketSize: Int {
         return maxUDPSize
     }
 
     public func setPixel(x: Int, y: Int, color: Color) {
-        guard x >= 0 && x < width_ && y >= 0 && y < height_ else {
+        guard x >= 0 && x < width && y >= 0 && y < height else {
             return
         }
 
-        let pixelOffset = pixelBufferStart + (y * width_ + x) * 3
+        let pixelOffset = pixelBufferStart + (y * width + x) * 3
         buffer[pixelOffset] = color.r
         buffer[pixelOffset + 1] = color.g
         buffer[pixelOffset + 2] = color.b
     }
 
     public func getPixel(x: Int, y: Int) -> Color {
-        let wrappedX = x % width_
-        let wrappedY = y % height_
-        let pixelOffset = pixelBufferStart + (wrappedY * width_ + wrappedX) * 3
+        let wrappedX = x % width
+        let wrappedY = y % height
+        let pixelOffset = pixelBufferStart + (wrappedY * width + wrappedX) * 3
 
         return Color(
             r: buffer[pixelOffset],
@@ -126,7 +118,7 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
     }
 
     public func clear() {
-        let pixelCount = width_ * height_
+        let pixelCount = width * height
         for i in 0..<pixelCount {
             let offset = pixelBufferStart + i * 3
             buffer[offset] = 0
@@ -139,7 +131,7 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
         if color.isBlack {
             clear()
         } else {
-            let pixelCount = width_ * height_
+            let pixelCount = width * height
             for i in 0..<pixelCount {
                 let offset = pixelBufferStart + i * 3
                 buffer[offset] = color.r
@@ -161,21 +153,21 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
             return
         }
 
-        let rowSize = 3 * width_
+        let rowSize = 3 * width
         let maxRowsPerPacket = (maxUDPSize - UDPFlaschenTaschen.headerReserve) / rowSize
 
         // Calculate total number of packets
-        let totalPackets = (height_ + maxRowsPerPacket - 1) / maxRowsPerPacket
+        let totalPackets = (height + maxRowsPerPacket - 1) / maxRowsPerPacket
 
         var chunkRowOffset = 0
         var packetNumber = 1
 
-        while chunkRowOffset < height_ {
-            let rowsThisChunk = min(maxRowsPerPacket, height_ - chunkRowOffset)
+        while chunkRowOffset < height {
+            let rowsThisChunk = min(maxRowsPerPacket, height - chunkRowOffset)
 
             // Build PPM header with #FT: offset comment for this chunk
             let header = String(format: "P6\n%d %d\n#FT: %d %d %d\n255\n",
-                               width_, rowsThisChunk,
+                               width, rowsThisChunk,
                                offsetX, offsetY + chunkRowOffset, offsetZ)
             guard let headerData = header.data(using: .ascii) else {
                 logger.error("Failed to encode PPM header")
@@ -220,12 +212,12 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
 
     /// Return packet boundaries for testing (pure math, no I/O)
     public func packetRanges() -> [(rowStart: Int, rowCount: Int)] {
-        let rowSize = 3 * width_
+        let rowSize = 3 * width
         let maxRows = (maxUDPSize - UDPFlaschenTaschen.headerReserve) / rowSize
         var result: [(Int, Int)] = []
         var offset = 0
-        while offset < height_ {
-            let rows = min(maxRows, height_ - offset)
+        while offset < height {
+            let rows = min(maxRows, height - offset)
             result.append((offset, rows))
             offset += rows
         }
@@ -233,7 +225,7 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
     }
 
     public func clone() -> UDPFlaschenTaschen {
-        let clone = UDPFlaschenTaschen(fileDescriptor: fileDescriptor, width: width_, height: height_)
+        let clone = UDPFlaschenTaschen(fileDescriptor: fileDescriptor, width: width, height: height)
         clone.buffer = self.buffer
         clone.offsetX = self.offsetX
         clone.offsetY = self.offsetY

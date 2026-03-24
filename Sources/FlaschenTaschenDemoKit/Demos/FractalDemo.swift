@@ -78,12 +78,12 @@ private class FractalState {
         let height16 = height << 17
         let z256 = 256.0 * (1.0 + z)
 
-        let width_fix = Int((Double(width16) / z256)) << 8
-        let height_fix = Int((Double(height16) / z256)) << 8
-        let startx = (width16 - width_fix) >> 1
-        let starty = (height16 - height_fix) >> 1
-        let deltax = width_fix / width
-        let deltay = height_fix / height
+        let widthFix = Int((Double(width16) / z256)) << 8
+        let heightFix = Int((Double(height16) / z256)) << 8
+        let startx = (width16 - widthFix) >> 1
+        let starty = (height16 - heightFix) >> 1
+        let deltax = widthFix / width
+        let deltay = heightFix / height
 
         var offset = 0
         var py = starty
