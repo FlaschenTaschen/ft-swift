@@ -20,13 +20,13 @@ struct Depth {
         let socket = openFlaschenTaschenSocket(hostname: standardOptions.hostname)
         let canvas = UDPFlaschenTaschen(fileDescriptor: socket, width: standardOptions.width, height: standardOptions.height)
 
-        let options = MatrixDemo.Options(standardOptions: standardOptions)
-        await MatrixDemo.run(options: options, canvas: canvas)
+        let options = DepthDemo.Options(standardOptions: standardOptions)
+        await DepthDemo.run(options: options, canvas: canvas)
     }
 
     static func printUsage() {
-        print("Matrix (c) 2016 Carl Gorringe (carl.gorringe.org)")
-        print("Usage: matrix [options]")
+        print("Depth - Parallax scrolling depth visualization")
+        print("Usage: depth [options]")
         print("Options:")
         StandardOptions.printStandardOptions()
     }
