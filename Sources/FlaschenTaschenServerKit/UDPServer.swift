@@ -19,8 +19,10 @@ public actor UDPServer {
 
     // Layer persistence for multi-packet accumulation
     private var layerBuffers: [Int: [PixelColor]] = [:]
+    private var layerTimers: [Int: Task<Void, Never>] = [:]
     private var lastPacketTime: Date?
     private let packetTimeoutSeconds: TimeInterval = 1.0
+    private let flushDelaySeconds: TimeInterval = 0.05  // 50ms to accumulate packets
 
     public init(gridWidth: Int, gridHeight: Int,
          onPixelUpdate: @escaping @Sendable (PPMImage) async -> Void,
@@ -164,6 +166,22 @@ public actor UDPServer {
         onError("Receive error: \(error.localizedDescription)")
     }
 
+    private func flushLayer(_ layer: Int) async {
+        guard let pixelGrid = layerBuffers[layer] else {
+            return
+        }
+
+        // Send the complete accumulated buffer for this layer
+        let completeImage = PPMImage(width: self.gridWidth, height: self.gridHeight, pixels: pixelGrid,
+                                    offsetX: 0, offsetY: 0, layer: layer)
+        let nonBlackCount = pixelGrid.filter { !($0.red == 0 && $0.green == 0 && $0.blue == 0) }.count
+        logger.info("🖼️ SEND layer \(layer, privacy: .public): \(self.gridWidth, privacy: .public)x\(self.gridHeight, privacy: .public) (\(nonBlackCount, privacy: .public) non-black pixels)")
+        await onPixelUpdate(completeImage)
+
+        // Clear the timer reference
+        layerTimers[layer] = nil
+    }
+
     public func processPacket(_ data: Data) async {
         do {
             let image = try PPMParser.parse(data: data)
@@ -208,13 +226,20 @@ public actor UDPServer {
                 layerBuffers[layer] = pixelGrid
                 lastPacketTime = now
 
-                // Send immediately after each packet, matching C++ behavior
-                // The buffer persists so subsequent packets can build on it
-                let completeImage = PPMImage(width: self.gridWidth, height: self.gridHeight, pixels: pixelGrid,
-                                            offsetX: 0, offsetY: 0, layer: layer)
-                let nonBlackCount = pixelGrid.filter { !($0.red == 0 && $0.green == 0 && $0.blue == 0) }.count
-                logger.info("🖼️ SEND layer \(layer, privacy: .public): \(self.gridWidth, privacy: .public)x\(self.gridHeight, privacy: .public) (\(nonBlackCount, privacy: .public) non-black pixels)")
-                await self.onPixelUpdate(completeImage)
+                // Cancel existing timer for this layer and schedule a new flush
+                if let existingTask = layerTimers[layer] {
+                    existingTask.cancel()
+                }
+
+                let delaySeconds = flushDelaySeconds
+                let flushTask = Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(delaySeconds))
+
+                    if !Task.isCancelled {
+                        await self?.flushLayer(layer)
+                    }
+                }
+                layerTimers[layer] = flushTask
             }
         } catch {
             logger.warning("Discarding malformed packet: \(error.localizedDescription, privacy: .public)")
