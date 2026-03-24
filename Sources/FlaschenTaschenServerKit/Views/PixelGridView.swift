@@ -139,13 +139,13 @@ public struct LensDistortedCircleView: View {
     }
 
     private func generateDistortedImage() {
-        DispatchQueue.global(qos: .userInitiated).async {
+        Task(priority: .userInitiated) {
             if let cgImage = createCircleCGImage(color: color, size: size) {
                 let ciImage = CIImage(cgImage: cgImage)
                 if let distorted = applyLensDistortion(ciImage) {
                     let context = CIContext()
                     if let outputCG = context.createCGImage(distorted, from: distorted.extent) {
-                        DispatchQueue.main.async {
+                        await MainActor.run {
                             self.distortedImage = Image(outputCG, scale: 1.0, label: Text(""))
                         }
                     }
