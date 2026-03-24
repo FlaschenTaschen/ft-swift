@@ -197,7 +197,15 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
             }
 
             if sent < 0 {
-                logger.error("write() failed at packet \(packetNumber, privacy: .public) of \(totalPackets, privacy: .public), errno: \(errno, privacy: .public)")
+                let errStr = String(cString: strerror(errno))
+                if errno == 61 { // ECONNREFUSED
+                    logger.error("write() failed: Connection refused (errno \(errno)). Is the FT server running and listening? Check the host/port configuration. fd=\(self.fileDescriptor, privacy: .public)")
+                    
+                    exit(EXIT_FAILURE)
+                } else {
+                    logger.error("write() failed at packet \(packetNumber, privacy: .public) of \(totalPackets, privacy: .public), errno: \(errno, privacy: .public) (\(errStr, privacy: .public)), fd=\(self.fileDescriptor, privacy: .public)")
+                    exit(EXIT_FAILURE)
+                }
                 return
             }
 
@@ -258,6 +266,17 @@ public func openFlaschenTaschenSocket(hostname: String?) -> Int32 {
         return -1
     }
 
+    // Get the resolved IP address for diagnostics
+    var resolvedIP = "unknown"
+    if let addr = info.pointee.ai_addr {
+        var resolvedHost = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+        if getnameinfo(addr, socklen_t(addr.pointee.sa_len),
+                      &resolvedHost, socklen_t(resolvedHost.count),
+                      nil, 0, NI_NUMERICHOST) == 0 {
+            resolvedIP = String(cString: resolvedHost)
+        }
+    }
+
     let fd = socket(info.pointee.ai_family, info.pointee.ai_socktype, info.pointee.ai_protocol)
 
     guard fd >= 0 else {
@@ -266,11 +285,11 @@ public func openFlaschenTaschenSocket(hostname: String?) -> Int32 {
     }
 
     if connect(fd, info.pointee.ai_addr, info.pointee.ai_addrlen) < 0 {
-        logger.error("connect() failed - is the FT display running at \(host, privacy: .public):1337?")
+        logger.error("connect() failed to \(host, privacy: .public) (resolved: \(resolvedIP, privacy: .public):1337) - is the FT display running there?")
         close(fd)
         return -1
     }
 
-    logger.debug("Successfully connected to FT display (fd=\(fd, privacy: .public))")
+    logger.info("Successfully connected to FT display at \(host, privacy: .public) (resolved: \(resolvedIP, privacy: .public):1337) (fd=\(fd, privacy: .public))")
     return fd
 }
