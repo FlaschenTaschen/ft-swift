@@ -64,10 +64,10 @@ public final class DisplayModel: @unchecked Sendable {
     private func loadSettings() {
         let defaults = UserDefaults.standard
         gridWidth = defaults.integer(forKey: "displayGridWidth")
-        if gridWidth == 0 || gridWidth > 65 { gridWidth = 45 }
+        if gridWidth == 0 { gridWidth = 45 }
 
         gridHeight = defaults.integer(forKey: "displayGridHeight")
-        if gridHeight == 0 || gridHeight > 65 { gridHeight = 35 }
+        if gridHeight == 0 { gridHeight = 35 }
 
         pixelWidth = CGFloat(defaults.double(forKey: "displayPixelSize"))
         if pixelWidth == 0 || pixelWidth < 4 { pixelWidth = 16 }
