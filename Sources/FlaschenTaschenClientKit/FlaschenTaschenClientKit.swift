@@ -202,7 +202,7 @@ public class UDPFlaschenTaschen: @unchecked Sendable {
             }
 
             if totalPackets > 1 {
-                logger.debug("Sent packet \(packetNumber, privacy: .public) of \(totalPackets, privacy: .public): rows \(chunkRowOffset, privacy: .public)-\(chunkRowOffset + rowsThisChunk - 1, privacy: .public)")
+                logger.debug("Sent packet \(packetNumber, privacy: .public) of \(totalPackets, privacy: .public): rows \(chunkRowOffset, privacy: .public)-\(chunkRowOffset + rowsThisChunk - 1, privacy: .public) offset=(\(self.offsetX, privacy: .public),\(self.offsetY + chunkRowOffset, privacy: .public),\(self.offsetZ, privacy: .public))")
             }
 
             chunkRowOffset += rowsThisChunk
