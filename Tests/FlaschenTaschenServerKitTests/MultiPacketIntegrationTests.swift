@@ -81,8 +81,8 @@ struct MultiPacketIntegrationTests {
 
         await server.processPacket(packet1)
 
-        // After packet 1: nothing should be displayed yet
-        #expect(await log.count() == 0, "Incomplete frame should not display after packet 1")
+        // After packet 1: should display immediately (matching C++ behavior)
+        #expect(await log.count() == 1, "Packet 1 should display immediately")
 
         // PACKET 2: Second part of 64×64 image
         // Header: P6, 64×17, #FT: 0 47 7, 255
@@ -97,19 +97,19 @@ struct MultiPacketIntegrationTests {
 
         await server.processPacket(packet2)
 
-        // After packet 2: complete frame should be displayed
-        #expect(await log.count() == 1, "Complete frame should display after packet 2")
-        let frame0 = await log.frame(at: 0)
-        #expect(frame0.width == 64)
-        #expect(frame0.height == 64)
-        #expect(frame0.layer == 7)
+        // After packet 2: accumulated frame should display
+        #expect(await log.count() == 2, "Packet 2 should also display")
+        let frame1 = await log.frame(at: 1)  // Check the final accumulated frame
+        #expect(frame1.width == 64)
+        #expect(frame1.height == 64)
+        #expect(frame1.layer == 7)
 
         // Verify all pixels are present
-        let pixelCount = frame0.pixels.count
+        let pixelCount = frame1.pixels.count
         #expect(pixelCount == 4096, "Complete 64×64 frame should have 4096 pixels")
 
         // Count non-black pixels (all should be red from our packets)
-        let nonBlackCount = frame0.pixels.filter { !($0.red == 0 && $0.green == 0 && $0.blue == 0) }.count
+        let nonBlackCount = frame1.pixels.filter { !($0.red == 0 && $0.green == 0 && $0.blue == 0) }.count
         #expect(nonBlackCount == 4096, "All pixels should be red (from accumulated packets)")
     }
 
@@ -141,7 +141,7 @@ struct MultiPacketIntegrationTests {
             }
 
             await server.processPacket(p1)
-            #expect(await log.count() == 0, "Packet 1 should not display for layer \(layer)")
+            #expect(await log.count() == 1, "Packet 1 should display for layer \(layer)")
 
             // Packet 2
             var p2 = "P6\n".data(using: .ascii)!
@@ -153,8 +153,8 @@ struct MultiPacketIntegrationTests {
             }
 
             await server.processPacket(p2)
-            #expect(await log.count() == 1, "Complete frame should display for layer \(layer)")
-            let entry = await log.entry(at: 0)
+            #expect(await log.count() == 2, "Packet 2 should also display for layer \(layer)")
+            let entry = await log.entry(at: 1)  // Check the final packet
             #expect(entry.layer == layer, "Layer should be \(layer)")
         }
     }
@@ -234,7 +234,7 @@ struct MultiPacketIntegrationTests {
         }
 
         await server.processPacket(incomplete)
-        #expect(await log.count() == 0, "Incomplete frame should not display")
+        #expect(await log.count() == 1, "Incomplete frame should display immediately")
 
         // Simulate timeout by sending new frame with offset 0
         // This should reset the buffer for the incomplete frame
@@ -247,9 +247,9 @@ struct MultiPacketIntegrationTests {
         }
 
         await server.processPacket(newFrame)
-        #expect(await log.count() == 1, "Complete frame should display")
-        let frame0 = await log.frame(at: 0)
-        #expect(frame0.layer == 7)
+        #expect(await log.count() == 2, "New complete frame should display")
+        let frame1 = await log.frame(at: 1)
+        #expect(frame1.layer == 7)
     }
 
     /// Test rapid multi-layer updates
@@ -267,7 +267,7 @@ struct MultiPacketIntegrationTests {
             onReady: {}
         )
 
-        // Interleave packets from different layers
+        // Interleave packets from different layers - each packet displays
         for layer in [1, 2, 3] {
             // Packet 1
             var p1 = "P6\n".data(using: .ascii)!
@@ -292,10 +292,10 @@ struct MultiPacketIntegrationTests {
             await server.processPacket(p2)
         }
 
-        // All 3 layers should have complete frames
-        #expect(await log.count() == 3)
+        // Each packet displays: 3 layers × 2 packets = 6 total
+        #expect(await log.count() == 6)
 
-        // Verify they're from different layers
+        // Verify all layers are represented
         let all = await log.allFrames()
         let layers = Set(all.map { $0.layer })
         #expect(layers == [1, 2, 3])
@@ -337,8 +337,8 @@ struct MultiPacketIntegrationTests {
         await server.processPacket(top)
         await server.processPacket(bottom)
 
-        #expect(await log.count() == 1)
-        let frame = await log.frame(at: 0)
+        #expect(await log.count() == 2)
+        let frame = await log.frame(at: 1)  // Check the final accumulated frame
 
         // Verify dimensions
         #expect(frame.width == 64)

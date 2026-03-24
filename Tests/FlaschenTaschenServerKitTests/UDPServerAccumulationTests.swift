@@ -118,9 +118,12 @@ struct UDPServerAccumulationTests {
 
         await server.processPacket(packet1)
 
-        // After first packet: should NOT display (frame incomplete)
+        // After first packet: should display immediately (matching C++ behavior)
         var updates = await tracker.getUpdates()
-        #expect(updates.count == 0, "First packet should not trigger display")
+        #expect(updates.count == 1, "First packet should trigger display")
+        #expect(updates[0].width == 64)
+        #expect(updates[0].height == 64)
+        #expect(updates[0].layer == 7)
 
         // Packet 2: rows 47-63 (17 rows)
         let packet2 = createPPMImage(
@@ -134,12 +137,12 @@ struct UDPServerAccumulationTests {
 
         await server.processPacket(packet2)
 
-        // After second packet: should display complete frame
+        // After second packet: should display accumulated frame
         updates = await tracker.getUpdates()
-        #expect(updates.count == 1, "Complete frame should trigger display")
-        #expect(updates[0].width == 64)
-        #expect(updates[0].height == 64)
-        #expect(updates[0].layer == 7)
+        #expect(updates.count == 2, "Second packet should also trigger display")
+        #expect(updates[1].width == 64)
+        #expect(updates[1].height == 64)
+        #expect(updates[1].layer == 7)
     }
 
     @Test
@@ -179,12 +182,13 @@ struct UDPServerAccumulationTests {
 
         // Verify the accumulated pixels at specific positions
         let updates = await tracker.getUpdates()
-        #expect(updates.count == 1)
+        #expect(updates.count == 2, "Each packet should trigger a display")
 
-        let completeImage = updates[0]
+        // Check the final accumulated frame (second update)
+        let completeImage = updates[1]
         // All pixels should be red (255,0,0) since we sent red pixels
         let nonBlackCount = completeImage.pixels.filter { !($0.red == 0 && $0.green == 0 && $0.blue == 0) }.count
-        #expect(nonBlackCount == 64 * 64, "All 4096 pixels should be non-black")
+        #expect(nonBlackCount == 64 * 64, "All 4096 pixels should be non-black after accumulation")
     }
 
     @Test
@@ -200,7 +204,7 @@ struct UDPServerAccumulationTests {
             onReady: {}
         )
 
-        // Layer 5: first packet
+        // Layer 5: first packet displays immediately
         let layer5Packet1 = createPPMImage(
             width: 64,
             height: 32,
@@ -212,7 +216,7 @@ struct UDPServerAccumulationTests {
 
         await server.processPacket(layer5Packet1)
 
-        // Layer 7: first packet (incomplete on its own layer)
+        // Layer 7: first packet displays immediately
         let layer7Packet1 = createPPMImage(
             width: 64,
             height: 47,
@@ -225,9 +229,9 @@ struct UDPServerAccumulationTests {
         await server.processPacket(layer7Packet1)
 
         var updates = await tracker.getUpdates()
-        #expect(updates.count == 0, "Neither layer has a full grid yet")
+        #expect(updates.count == 2, "Both packets should display immediately")
 
-        // Finish layer 5 first — server only emits when offsetY + height >= gridHeight
+        // Layer 5: second packet
         let layer5Packet2 = createPPMImage(
             width: 64,
             height: 32,
@@ -240,8 +244,8 @@ struct UDPServerAccumulationTests {
         await server.processPacket(layer5Packet2)
 
         updates = await tracker.getUpdates()
-        #expect(updates.count == 1, "Layer 5 should display once its strips cover full height")
-        #expect(updates[0].layer == 5)
+        #expect(updates.count == 3, "Layer 5 second packet should display")
+        #expect(updates[2].layer == 5)
 
         // Layer 7: second packet
         let layer7Packet2 = createPPMImage(
@@ -256,8 +260,8 @@ struct UDPServerAccumulationTests {
         await server.processPacket(layer7Packet2)
 
         updates = await tracker.getUpdates()
-        #expect(updates.count == 2, "Layer 7 complete should display")
-        #expect(updates[1].layer == 7)
+        #expect(updates.count == 4, "Layer 7 second packet should display")
+        #expect(updates[3].layer == 7)
     }
 
     @Test
@@ -273,14 +277,14 @@ struct UDPServerAccumulationTests {
             onReady: {}
         )
 
-        // Test the boundary condition: offsetY + height >= gridHeight
-        let testCases: [(offsetY: Int, height: Int, shouldComplete: Bool)] = [
-            (0, 47, false),   // 0 + 47 = 47 < 64
-            (47, 17, true),   // 47 + 17 = 64 >= 64
-            (30, 34, true),   // 30 + 34 = 64 >= 64
-            (0, 64, true),    // 0 + 64 = 64 >= 64
-            (32, 33, true),   // 32 + 33 = 65 >= 64
-            (63, 1, true),    // 63 + 1 = 64 >= 64
+        // With C++ behavior, all packets display immediately
+        let testCases: [(offsetY: Int, height: Int, shouldDisplay: Bool)] = [
+            (0, 47, true),    // Display immediately
+            (47, 17, true),   // Display immediately
+            (30, 34, true),   // Display immediately
+            (0, 64, true),    // Display immediately
+            (32, 33, true),   // Display immediately
+            (63, 1, true),    // Display immediately
         ]
 
         for testCase in testCases {
@@ -301,8 +305,8 @@ struct UDPServerAccumulationTests {
             let displayed = updates.count > 0
 
             #expect(
-                displayed == testCase.shouldComplete,
-                "offsetY=\(testCase.offsetY) height=\(testCase.height): should\(testCase.shouldComplete ? "" : " not") display"
+                displayed == testCase.shouldDisplay,
+                "offsetY=\(testCase.offsetY) height=\(testCase.height): should display"
             )
         }
     }
@@ -360,7 +364,7 @@ struct UDPServerAccumulationTests {
             onReady: {}
         )
 
-        // Frame 1: complete in 2 packets
+        // Frame 1: complete in 2 packets, each displays immediately
         let frame1Packet1 = createPPMImage(
             width: 64,
             height: 47,
@@ -382,9 +386,9 @@ struct UDPServerAccumulationTests {
         await server.processPacket(frame1Packet2)
 
         var updates = await tracker.getUpdates()
-        #expect(updates.count == 1, "Frame 1 should display")
+        #expect(updates.count == 2, "Frame 1 packets should each display")
 
-        // Frame 2: starts fresh
+        // Frame 2: starts fresh, each packet displays immediately
         let frame2Packet1 = createPPMImage(
             width: 64,
             height: 32,
@@ -396,7 +400,7 @@ struct UDPServerAccumulationTests {
         await server.processPacket(frame2Packet1)
 
         updates = await tracker.getUpdates()
-        #expect(updates.count == 1, "Incomplete frame 2 should not display")
+        #expect(updates.count == 3, "Frame 2 packet 1 should display")
 
         // Frame 2: complete
         let frame2Packet2 = createPPMImage(
@@ -410,7 +414,7 @@ struct UDPServerAccumulationTests {
         await server.processPacket(frame2Packet2)
 
         updates = await tracker.getUpdates()
-        #expect(updates.count == 2, "Frame 2 complete should display")
+        #expect(updates.count == 4, "Frame 2 packet 2 should also display")
     }
 
     @Test
@@ -426,7 +430,7 @@ struct UDPServerAccumulationTests {
             onReady: {}
         )
 
-        // Layer 3: incomplete frame
+        // Layer 3: packet 1 displays immediately
         let layer3Packet1 = createPPMImage(
             width: 64,
             height: 32,
@@ -437,7 +441,7 @@ struct UDPServerAccumulationTests {
 
         await server.processPacket(layer3Packet1)
 
-        // Layer 7: complete frame
+        // Layer 7: complete frame displays immediately
         let layer7Complete = createPPMImage(
             width: 64,
             height: 64,
@@ -449,10 +453,11 @@ struct UDPServerAccumulationTests {
         await server.processPacket(layer7Complete)
 
         var updates = await tracker.getUpdates()
-        #expect(updates.count == 1, "Only layer 7 should display")
-        #expect(updates[0].layer == 7)
+        #expect(updates.count == 2, "Both layers should display")
+        #expect(updates[0].layer == 3)
+        #expect(updates[1].layer == 7)
 
-        // Layer 3: complete its frame
+        // Layer 3: packet 2 displays
         let layer3Packet2 = createPPMImage(
             width: 64,
             height: 32,
@@ -464,8 +469,8 @@ struct UDPServerAccumulationTests {
         await server.processPacket(layer3Packet2)
 
         updates = await tracker.getUpdates()
-        #expect(updates.count == 2, "Layer 3 complete should now display")
-        #expect(updates[1].layer == 3)
+        #expect(updates.count == 3, "Layer 3 packet 2 should also display")
+        #expect(updates[2].layer == 3)
     }
 
     // MARK: - Edge Cases
@@ -483,7 +488,7 @@ struct UDPServerAccumulationTests {
             onReady: {}
         )
 
-        // Send 64 single-row packets
+        // Send 64 single-row packets, each displays immediately
         for row in 0..<64 {
             let packet = createPPMImage(
                 width: 64,
@@ -497,11 +502,8 @@ struct UDPServerAccumulationTests {
             await server.processPacket(packet)
 
             let updates = await tracker.getUpdates()
-            if row < 63 {
-                #expect(updates.count == 0, "Rows 0-62 should not display")
-            } else {
-                #expect(updates.count == 1, "Row 63 should complete frame")
-            }
+            // Each packet displays immediately
+            #expect(updates.count == row + 1, "Row \(row) should display, total \(row + 1)")
         }
     }
 

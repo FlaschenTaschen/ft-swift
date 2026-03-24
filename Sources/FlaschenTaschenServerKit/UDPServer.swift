@@ -208,24 +208,13 @@ public actor UDPServer {
                 layerBuffers[layer] = pixelGrid
                 lastPacketTime = now
 
-                // Check if frame is complete (packets cover full height)
-                let frameComplete = image.offsetY + image.height >= self.gridHeight
-
-                if frameComplete {
-                    // Frame is complete - send to display and reset buffer
-                    let completeImage = PPMImage(width: self.gridWidth, height: self.gridHeight, pixels: pixelGrid,
-                                                offsetX: 0, offsetY: 0, layer: layer)
-                    let nonBlackCount = pixelGrid.filter { !($0.red == 0 && $0.green == 0 && $0.blue == 0) }.count
-                    logger.info("🖼️ SEND layer \(layer, privacy: .public): \(self.gridWidth, privacy: .public)x\(self.gridHeight, privacy: .public) (\(nonBlackCount, privacy: .public) non-black pixels)")
-                    await self.onPixelUpdate(completeImage)
-
-                    logger.debug("Layer \(layer, privacy: .public): frame complete (offset=\(image.offsetY, privacy: .public) + height=\(image.height, privacy: .public) >= gridHeight=\(self.gridHeight, privacy: .public)), resetting buffer")
-                    // Reset buffer for next frame
-                    layerBuffers[layer] = nil
-                } else {
-                    // Frame incomplete - accumulate more packets
-                    logger.debug("Layer \(layer, privacy: .public): accumulating... coverage so far: rows 0-\(image.offsetY + image.height - 1, privacy: .public) of \(self.gridHeight, privacy: .public)")
-                }
+                // Send immediately after each packet, matching C++ behavior
+                // The buffer persists so subsequent packets can build on it
+                let completeImage = PPMImage(width: self.gridWidth, height: self.gridHeight, pixels: pixelGrid,
+                                            offsetX: 0, offsetY: 0, layer: layer)
+                let nonBlackCount = pixelGrid.filter { !($0.red == 0 && $0.green == 0 && $0.blue == 0) }.count
+                logger.info("🖼️ SEND layer \(layer, privacy: .public): \(self.gridWidth, privacy: .public)x\(self.gridHeight, privacy: .public) (\(nonBlackCount, privacy: .public) non-black pixels)")
+                await self.onPixelUpdate(completeImage)
             }
         } catch {
             logger.warning("Discarding malformed packet: \(error.localizedDescription, privacy: .public)")
