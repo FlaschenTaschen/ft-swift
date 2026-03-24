@@ -5,11 +5,11 @@ import os.log
 
 nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: "ServerView")
 
-struct ServerView: View {
+public struct ServerView: View {
     @Bindable var displayModel: DisplayModel
     @Binding var showServerView: Bool
 
-    var body: some View {
+    public var body: some View {
         HStack(alignment: .center, spacing: 12) {
             ServerControlsView(displayModel: displayModel)
 

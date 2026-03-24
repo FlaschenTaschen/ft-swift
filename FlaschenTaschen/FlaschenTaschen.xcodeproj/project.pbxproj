@@ -6,30 +6,18 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXContainerItemProxy section */
-		26BD9A352F5B6B63005CFF4D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 26BD9A1F2F5B6B62005CFF4D /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 26BD9A262F5B6B62005CFF4D;
-			remoteInfo = FlaschenTaschen;
-		};
-/* End PBXContainerItemProxy section */
+/* Begin PBXBuildFile section */
+		26FF95F42F720B2800511E8B /* FlaschenTaschenServerKit in Frameworks */ = {isa = PBXBuildFile; productRef = 26FF95F32F720B2800511E8B /* FlaschenTaschenServerKit */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		26BD9A272F5B6B62005CFF4D /* FlaschenTaschen.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlaschenTaschen.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		26BD9A342F5B6B63005CFF4D /* FlaschenTaschenTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FlaschenTaschenTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		26BD9A292F5B6B62005CFF4D /* FlaschenTaschen */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = FlaschenTaschen;
-			sourceTree = "<group>";
-		};
-		26BD9A372F5B6B63005CFF4D /* FlaschenTaschenTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FlaschenTaschenTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -39,13 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		26BD9A312F5B6B63005CFF4D /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
+				26FF95F42F720B2800511E8B /* FlaschenTaschenServerKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -56,7 +38,6 @@
 			isa = PBXGroup;
 			children = (
 				26BD9A292F5B6B62005CFF4D /* FlaschenTaschen */,
-				26BD9A372F5B6B63005CFF4D /* FlaschenTaschenTests */,
 				26BD9A282F5B6B62005CFF4D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -65,7 +46,6 @@
 			isa = PBXGroup;
 			children = (
 				26BD9A272F5B6B62005CFF4D /* FlaschenTaschen.app */,
-				26BD9A342F5B6B63005CFF4D /* FlaschenTaschenTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -90,33 +70,11 @@
 			);
 			name = FlaschenTaschen;
 			packageProductDependencies = (
+				26FF95F32F720B2800511E8B /* FlaschenTaschenServerKit */,
 			);
 			productName = FlaschenTaschen;
 			productReference = 26BD9A272F5B6B62005CFF4D /* FlaschenTaschen.app */;
 			productType = "com.apple.product-type.application";
-		};
-		26BD9A332F5B6B63005CFF4D /* FlaschenTaschenTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 26BD9A4B2F5B6B63005CFF4D /* Build configuration list for PBXNativeTarget "FlaschenTaschenTests" */;
-			buildPhases = (
-				26BD9A302F5B6B63005CFF4D /* Sources */,
-				26BD9A312F5B6B63005CFF4D /* Frameworks */,
-				26BD9A322F5B6B63005CFF4D /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				26BD9A362F5B6B63005CFF4D /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				26BD9A372F5B6B63005CFF4D /* FlaschenTaschenTests */,
-			);
-			name = FlaschenTaschenTests;
-			packageProductDependencies = (
-			);
-			productName = FlaschenTaschenTests;
-			productReference = 26BD9A342F5B6B63005CFF4D /* FlaschenTaschenTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -131,10 +89,6 @@
 					26BD9A262F5B6B62005CFF4D = {
 						CreatedOnToolsVersion = 26.3;
 					};
-					26BD9A332F5B6B63005CFF4D = {
-						CreatedOnToolsVersion = 26.3;
-						TestTargetID = 26BD9A262F5B6B62005CFF4D;
-					};
 				};
 			};
 			buildConfigurationList = 26BD9A222F5B6B62005CFF4D /* Build configuration list for PBXProject "FlaschenTaschen" */;
@@ -146,26 +100,21 @@
 			);
 			mainGroup = 26BD9A1E2F5B6B62005CFF4D;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				26FF95F22F720B2800511E8B /* XCLocalSwiftPackageReference "../../ft-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 26BD9A282F5B6B62005CFF4D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				26BD9A262F5B6B62005CFF4D /* FlaschenTaschen */,
-				26BD9A332F5B6B63005CFF4D /* FlaschenTaschenTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		26BD9A252F5B6B62005CFF4D /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		26BD9A322F5B6B63005CFF4D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -182,22 +131,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		26BD9A302F5B6B63005CFF4D /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		26BD9A362F5B6B63005CFF4D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 26BD9A262F5B6B62005CFF4D /* FlaschenTaschen */;
-			targetProxy = 26BD9A352F5B6B63005CFF4D /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		26BD9A462F5B6B63005CFF4D /* Debug */ = {
@@ -363,6 +297,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 18.6;
 			};
 			name = Debug;
 		};
@@ -409,48 +344,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
-			};
-			name = Release;
-		};
-		26BD9A4C2F5B6B63005CFF4D /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = XV8BAAVZ6V;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = co.sstools.FlaschenTaschenTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FlaschenTaschen.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FlaschenTaschen";
-			};
-			name = Debug;
-		};
-		26BD9A4D2F5B6B63005CFF4D /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = XV8BAAVZ6V;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = co.sstools.FlaschenTaschenTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FlaschenTaschen.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FlaschenTaschen";
+				TVOS_DEPLOYMENT_TARGET = 18.6;
 			};
 			name = Release;
 		};
@@ -475,16 +369,21 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		26BD9A4B2F5B6B63005CFF4D /* Build configuration list for PBXNativeTarget "FlaschenTaschenTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				26BD9A4C2F5B6B63005CFF4D /* Debug */,
-				26BD9A4D2F5B6B63005CFF4D /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		26FF95F22F720B2800511E8B /* XCLocalSwiftPackageReference "../../ft-swift" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../../ft-swift";
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		26FF95F32F720B2800511E8B /* FlaschenTaschenServerKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FlaschenTaschenServerKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 26BD9A1F2F5B6B62005CFF4D /* Project object */;
 }

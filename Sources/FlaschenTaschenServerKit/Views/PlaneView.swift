@@ -5,11 +5,11 @@ import os.log
 
 nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: "PlaneView")
 
-struct PlaneView: View {
+public struct PlaneView: View {
     @Bindable var displayModel: DisplayModel
     @State private var showTVOSControls: Bool = false
 
-    var body: some View {
+    public var body: some View {
         #if os(tvOS)
         ZStack(alignment: .bottom) {
             PixelGridView(displayModel: displayModel)

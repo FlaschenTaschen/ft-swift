@@ -7,7 +7,7 @@ import Darwin
 
 nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: "UDPServer")
 
-actor UDPServer {
+public actor UDPServer {
     private let gridWidth: Int
     private let gridHeight: Int
     private let onPixelUpdate: @Sendable (PPMImage) async -> Void
@@ -22,7 +22,7 @@ actor UDPServer {
     private var lastPacketTime: Date?
     private let packetTimeoutSeconds: TimeInterval = 1.0
 
-    init(gridWidth: Int, gridHeight: Int,
+    public init(gridWidth: Int, gridHeight: Int,
          onPixelUpdate: @escaping @Sendable (PPMImage) async -> Void,
          onError: @escaping (String) -> Void,
          onReady: @escaping () -> Void) {
@@ -33,7 +33,7 @@ actor UDPServer {
         self.onReady = onReady
     }
 
-    func start() async throws {
+    public func start() async throws {
         startupError = nil
         let parameters = NWParameters.udp
         parameters.allowLocalEndpointReuse = true
@@ -68,7 +68,7 @@ actor UDPServer {
         }
     }
 
-    func stop() {
+    public func stop() {
         logger.info("UDP server stopping")
         listener?.cancel()
         listener = nil
@@ -78,7 +78,7 @@ actor UDPServer {
         }
     }
 
-    func isListening() -> Bool {
+    public func isListening() -> Bool {
         listener != nil
     }
 
@@ -164,7 +164,7 @@ actor UDPServer {
         onError("Receive error: \(error.localizedDescription)")
     }
 
-    func processPacket(_ data: Data) async {
+    public func processPacket(_ data: Data) async {
         do {
             let image = try PPMParser.parse(data: data)
             logger.info("🔵 PACKET: size=\(image.width, privacy: .public)x\(image.height, privacy: .public) offset=(\(image.offsetX, privacy: .public),\(image.offsetY, privacy: .public)) LAYER=\(image.layer, privacy: .public) pixels=\(image.pixels.count, privacy: .public)")

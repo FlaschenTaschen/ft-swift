@@ -5,16 +5,25 @@ import os.log
 
 nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: "PPMParser")
 
-nonisolated struct PPMImage: Sendable {
-    let width: Int
-    let height: Int
-    let pixels: [PixelColor]
-    let offsetX: Int
-    let offsetY: Int
-    let layer: Int
+public nonisolated struct PPMImage: Sendable {
+    public let width: Int
+    public let height: Int
+    public let pixels: [PixelColor]
+    public let offsetX: Int
+    public let offsetY: Int
+    public let layer: Int
+
+    public init(width: Int, height: Int, pixels: [PixelColor], offsetX: Int, offsetY: Int, layer: Int) {
+        self.width = width
+        self.height = height
+        self.pixels = pixels
+        self.offsetX = offsetX
+        self.offsetY = offsetY
+        self.layer = layer
+    }
 }
 
-enum PPMParseError: Error {
+public enum PPMParseError: Error {
     case invalidMagicNumber
     case invalidFormat
     case invalidDimensions
@@ -22,8 +31,8 @@ enum PPMParseError: Error {
     case invalidMetadata
 }
 
-nonisolated final class PPMParser {
-    nonisolated static func parse(data: Data) throws -> PPMImage {
+public nonisolated final class PPMParser {
+    public nonisolated static func parse(data: Data) throws -> PPMImage {
         let buffer = [UInt8](data)
         var offset = 0
 

@@ -8,6 +8,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         // Libraries
+        .library(name: "FlaschenTaschenServerKit", targets: ["FlaschenTaschenServerKit"]),
         .library(name: "FlaschenTaschenClientKit", targets: ["FlaschenTaschenClientKit"]),
         .library(name: "FlaschenTaschenDemoKit", targets: ["FlaschenTaschenDemoKit"]),
 
@@ -55,7 +56,8 @@ let package = Package(
         .executable(name: "kbd2midi", targets: ["kbd2midi"]),
     ],
     targets: [
-        // FlaschenTaschenClientKit Library
+        // Server, Client and Demos Libraries
+        .target(name: "FlaschenTaschenServerKit"),
         .target(name: "FlaschenTaschenClientKit"),
         .target(name: "FlaschenTaschenDemoKit", dependencies: ["FlaschenTaschenClientKit"]),
 
@@ -103,6 +105,7 @@ let package = Package(
         .executableTarget(name: "kbd2midi", dependencies: ["FlaschenTaschenDemoKit"]),
 
         // Tests
+        .testTarget(name: "FlaschenTaschenServerKitTests", dependencies: ["FlaschenTaschenServerKit"]),
         .testTarget(name: "FlaschenTaschenClientKitTests", dependencies: ["FlaschenTaschenClientKit"]),
     ]
 )

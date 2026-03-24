@@ -385,6 +385,20 @@
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FlaschenTaschenServerKit"
+               BuildableName = "FlaschenTaschenServerKit"
+               BlueprintName = "FlaschenTaschenServerKit"
+               ReferencedContainer = "container:">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -401,6 +415,16 @@
                BlueprintIdentifier = "FlaschenTaschenClientKitTests"
                BuildableName = "FlaschenTaschenClientKitTests"
                BlueprintName = "FlaschenTaschenClientKitTests"
+               ReferencedContainer = "container:">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FlaschenTaschenServerKitTests"
+               BuildableName = "FlaschenTaschenServerKitTests"
+               BlueprintName = "FlaschenTaschenServerKitTests"
                ReferencedContainer = "container:">
             </BuildableReference>
          </TestableReference>

@@ -2,10 +2,10 @@
 
 import SwiftUI
 
-struct ServerStatusView: View {
+public struct ServerStatusView: View {
     @Bindable var displayModel: DisplayModel
 
-    var body: some View {
+    public var body: some View {
 
         // Metrics
         HStack(spacing: 12) {
@@ -56,11 +56,11 @@ struct ServerStatusView: View {
     }
 }
 
-struct CompactLayerDetailView: View {
+public struct CompactLayerDetailView: View {
     let stats: LayerStatistics
     let layerTimeout: Int
 
-    var body: some View {
+    public var body: some View {
         HStack(alignment: .center, spacing: 6) {
             HStack {
                 Text("\(stats.layerID)")

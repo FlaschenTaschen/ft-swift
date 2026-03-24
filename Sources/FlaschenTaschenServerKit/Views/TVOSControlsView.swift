@@ -3,11 +3,11 @@
 #if os(tvOS)
 import SwiftUI
 
-struct TVOSControlsView: View {
+public struct TVOSControlsView: View {
     @Bindable var displayModel: DisplayModel
     @Binding var isShowing: Bool
 
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 8) {

@@ -10,15 +10,22 @@ nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: 
 // Performance measurement
 private let performanceLog = OSLog(subsystem: Logging.subsystem, category: "Performance")
 
-struct LayerStatistics: Sendable {
-    let layerID: Int
-    let pixelsActive: Int
-    let lastUpdateTime: Date
-    let timeSinceUpdate: TimeInterval
+public struct LayerStatistics: Sendable {
+    public let layerID: Int
+    public let pixelsActive: Int
+    public let lastUpdateTime: Date
+    public let timeSinceUpdate: TimeInterval
+
+    public init(layerID: Int, pixelsActive: Int, lastUpdateTime: Date, timeSinceUpdate: TimeInterval) {
+        self.layerID = layerID
+        self.pixelsActive = pixelsActive
+        self.lastUpdateTime = lastUpdateTime
+        self.timeSinceUpdate = timeSinceUpdate
+    }
 }
 
 @Observable
-final class DisplayModel {
+public final class DisplayModel: @unchecked Sendable {
     var gridWidth: Int = 45
     var gridHeight: Int = 35
     var pixelWidth: CGFloat = 16
@@ -49,7 +56,7 @@ final class DisplayModel {
     private var layerActivePixelCounts: [Int: Int] = [:]  // Phase 2: cache active pixel counts
     private var sortedLayerKeys: [Int] = []  // Phase 3: cache sorted layer keys
 
-    init() {
+    public init() {
         loadSettings()
         initializePixelData()
     }
@@ -76,7 +83,7 @@ final class DisplayModel {
         useLensDistortion = defaults.bool(forKey: "displayuseLensDistortion")
     }
 
-    func saveSettings() {
+    public func saveSettings() {
         let defaults = UserDefaults.standard
         defaults.set(gridWidth, forKey: "displayGridWidth")
         defaults.set(gridHeight, forKey: "displayGridHeight")
@@ -93,7 +100,7 @@ final class DisplayModel {
         }
     }
 
-    func startServer() async {
+    public func startServer() async {
         guard !isServerRunning, !(await server?.isListening() ?? false) else { return }
 
         logger.info("Starting UDP server")
@@ -102,32 +109,38 @@ final class DisplayModel {
         startLayerCleanupTimer()
         startLayerStatsUpdateTimer()
 
+        let pixelUpdateCallback: @Sendable (PPMImage) async -> Void = { [weak self] image in
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.applyLayerUpdate(image: image)
+                self.packetsReceived += 1
+            }
+        }
+
+        let errorCallback: @Sendable (String) -> Void = { [weak self] error in
+            logger.error("Error callback invoked: \(error)")
+            Task { @MainActor [weak self] in
+                logger.info("Setting serverError on main thread: \(error)")
+                self?.serverError = error
+                self?.isServerRunning = false
+            }
+        }
+
+        let readyCallback: @Sendable () -> Void = { [weak self] in
+            logger.info("Server ready callback invoked")
+            Task { @MainActor [weak self] in
+                logger.info("Setting isServerRunning = true on main thread")
+                self?.isServerRunning = true
+                self?.serverError = nil
+            }
+        }
+
         server = UDPServer(
             gridWidth: gridWidth,
             gridHeight: gridHeight,
-            onPixelUpdate: { [weak self] image in
-                await MainActor.run {
-                    guard let self else { return }
-                    self.applyLayerUpdate(image: image)
-                    self.packetsReceived += 1
-                }
-            },
-            onError: { [weak self] error in
-                logger.error("Error callback invoked: \(error)")
-                Task { @MainActor in
-                    logger.info("Setting serverError on main thread: \(error)")
-                    self?.serverError = error
-                    self?.isServerRunning = false
-                }
-            },
-            onReady: { [weak self] in
-                logger.info("Server ready callback invoked")
-                Task { @MainActor in
-                    logger.info("Setting isServerRunning = true on main thread")
-                    self?.isServerRunning = true
-                    self?.serverError = nil
-                }
-            }
+            onPixelUpdate: pixelUpdateCallback,
+            onError: errorCallback,
+            onReady: readyCallback
         )
 
         Task {
@@ -143,7 +156,7 @@ final class DisplayModel {
         }
     }
 
-    func stopServer() {
+    public func stopServer() {
         logger.info("Stopping server, packets received: \(self.packetsReceived, privacy: .public)")
         isServerRunning = false
         serverError = nil
@@ -205,21 +218,21 @@ final class DisplayModel {
         }
     }
 
-    func resetDisplay() {
+    public func resetDisplay() {
         logger.debug("Display reset")
         pixelData = (0..<(gridWidth * gridHeight)).map { index in
             PixelColor(id: index, red: 0, green: 0, blue: 0)
         }
     }
 
-    func updateGridDimensions(width: Int, height: Int) {
+    public func updateGridDimensions(width: Int, height: Int) {
         logger.info("Grid dimensions changed: \(self.gridWidth, privacy: .public)x\(self.gridHeight, privacy: .public) → \(width, privacy: .public)x\(height, privacy: .public)")
         gridWidth = width
         gridHeight = height
         initializePixelData()
     }
 
-    func calculateOptimalTVOSGridDimensions(for sceneSize: CGSize) -> (width: Int, height: Int) {
+    public func calculateOptimalTVOSGridDimensions(for sceneSize: CGSize) -> (width: Int, height: Int) {
         let pixelSize: CGFloat = 16
         var maxWidth = Int(floor(sceneSize.width / pixelSize))
         var maxHeight = Int(floor(sceneSize.height / pixelSize))

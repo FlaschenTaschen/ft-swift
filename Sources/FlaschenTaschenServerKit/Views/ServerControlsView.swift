@@ -2,10 +2,10 @@
 
 import SwiftUI
 
-struct ServerControlsView: View {
+public struct ServerControlsView: View {
     @Bindable var displayModel: DisplayModel
 
-    var body: some View {
+    public var body: some View {
         // Status: green dot + Running/Stopped
         HStack(spacing: 6) {
             Circle()

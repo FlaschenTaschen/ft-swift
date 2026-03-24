@@ -8,9 +8,10 @@ import AppKit
 
 nonisolated private let logger = Logger(subsystem: "ChatGPT", category: "ControlBackgroundViewModifier")
 
-struct ControlBackgroundViewModifier: ViewModifier {
+public struct ControlBackgroundViewModifier: ViewModifier {
+    public init() {}
 
-    func body(content: Content) -> some View {
+    public func body(content: Content) -> some View {
         content
             #if os(macOS)
             .background(Color(.controlBackgroundColor).opacity(0.9))

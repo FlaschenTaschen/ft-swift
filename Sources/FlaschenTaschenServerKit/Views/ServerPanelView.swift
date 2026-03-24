@@ -6,12 +6,12 @@ import os.log
 
 nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: "ServerPanelView")
 
-struct ServerPanelView: View {
+public struct ServerPanelView: View {
     @Bindable var displayModel: DisplayModel
     @State private var isFullScreen: Bool = false
     @State private var showServerView: Bool = true
 
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .trailing) {
             if !isFullScreen {
                 if showServerView {

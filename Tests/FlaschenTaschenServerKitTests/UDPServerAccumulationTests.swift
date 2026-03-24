@@ -3,7 +3,7 @@
 
 import Foundation
 import Testing
-@testable import FlaschenTaschen
+@testable import FlaschenTaschenServerKit
 
 struct UDPServerAccumulationTests {
 

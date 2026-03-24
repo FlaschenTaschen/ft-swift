@@ -18,7 +18,7 @@ struct DisplayPreset {
 }
 
 #if os(macOS)
-struct SettingsView: View {
+public struct SettingsView: View {
     @Bindable var displayModel: DisplayModel
     @State private var tempGridWidth: String = ""
     @State private var tempGridHeight: String = ""
@@ -26,7 +26,11 @@ struct SettingsView: View {
     @State private var selectedFrameRate: Int = 60
     @State private var tempLayerTimeout: String = ""
 
-    var body: some View {
+    public init(displayModel: DisplayModel) {
+        self._displayModel = Bindable(displayModel)
+    }
+
+    public var body: some View {
         Form {
             Section("Preset") {
                 Picker("Display Configuration", selection: $selectedPresetName) {

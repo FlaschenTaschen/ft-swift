@@ -6,7 +6,7 @@ import CoreImage
 
 nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: "PixelGridView")
 
-struct PixelGridView: View {
+public struct PixelGridView: View {
     @Bindable var displayModel: DisplayModel
     @State private var pixelSize: CGFloat = 16
     @State private var isFullScreen: Bool = false
@@ -17,7 +17,7 @@ struct PixelGridView: View {
         Array(repeating: GridItem(.fixed(pixelSize), spacing: 0), count: displayModel.gridWidth)
     }
 
-    var body: some View {
+    public var body: some View {
         ZStack(alignment: .bottomTrailing) {
             Color(.black)
                 .ignoresSafeArea()
@@ -73,13 +73,13 @@ struct PixelGridView: View {
     }
 }
 
-struct PixelView: View {
+public struct PixelView: View {
     let pixelColor: PixelColor
     let size: CGFloat
     let useCircle: Bool
     let useLensDistortion: Bool
 
-    var body: some View {
+    public var body: some View {
         if useCircle {
             if useLensDistortion {
                 LensDistortedCircleView(color: pixelColor.color, size: size)
@@ -97,12 +97,12 @@ struct PixelView: View {
     }
 }
 
-struct LensDistortedCircleView: View {
+public struct LensDistortedCircleView: View {
     let color: Color
     let size: CGFloat
     @State private var distortedImage: Image?
 
-    var body: some View {
+    public var body: some View {
         ZStack {
             if let distortedImage {
                 distortedImage

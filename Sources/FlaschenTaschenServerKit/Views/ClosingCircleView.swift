@@ -2,7 +2,7 @@
 
 import SwiftUI
 
-struct ClosingCircleView: View {
+public struct ClosingCircleView: View {
     let percentClosed: CGFloat
     let size: CGFloat
 
@@ -12,7 +12,7 @@ struct ClosingCircleView: View {
         colorScheme == .light ? Color.white.opacity(0.15) : Color.black.opacity(0.25)
     }
 
-    var body: some View {
+    public var body: some View {
         ZStack {
             Circle()
                 .fill(backgroundColor)
@@ -27,10 +27,10 @@ struct ClosingCircleView: View {
     }
 }
 
-struct PieSlice: Shape {
-    let percentage: CGFloat
+public struct PieSlice: Shape {
+    public let percentage: CGFloat
 
-    func path(in rect: CGRect) -> Path {
+    public func path(in rect: CGRect) -> Path {
         var path = Path()
         let center = CGPoint(x: rect.midX, y: rect.midY)
         let radius = min(rect.width, rect.height) / 2

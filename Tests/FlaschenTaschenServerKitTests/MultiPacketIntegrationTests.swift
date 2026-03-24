@@ -3,7 +3,7 @@
 
 import Foundation
 import Testing
-@testable import FlaschenTaschen
+@testable import FlaschenTaschenServerKit
 
 private actor ImageFrameLog {
     private var frames: [PPMImage] = []
