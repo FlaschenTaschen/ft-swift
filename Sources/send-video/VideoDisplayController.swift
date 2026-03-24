@@ -10,7 +10,6 @@ actor VideoDisplayController {
     private let canvas: UDPFlaschenTaschen
     private let frameReader: VideoFrameReader
     private let args: VideoArgs
-    private var shouldStop = false
 
     init(canvas: UDPFlaschenTaschen, frameReader: VideoFrameReader, args: VideoArgs) {
         self.canvas = canvas
@@ -20,25 +19,14 @@ actor VideoDisplayController {
 
     func playVideo() async {
         logger.info("Starting video playback (streaming)")
-        let startTime = Date()
+        let loop = AnimationLoop(timeout: Double(args.timeoutSeconds ?? Int(StandardOptions.defaultTimeout)), delay: 1)
         var framesSent = 0
         var firstFrameLogged = false
         var loopCount = 0
         var frameCount = 0
+        var accumulatedDelayMs = 0
 
-        while !shouldStop {
-            // Check timeout
-            if let timeout = args.timeoutSeconds {
-                let elapsed = Int(Date().timeIntervalSince(startTime))
-                if elapsed >= timeout {
-                    logger.info("Timeout reached at \(elapsed, privacy: .public)s")
-                    let msg = "Timeout reached at \(elapsed)s\n"
-                    FileHandle.standardError.write(msg.data(using: .utf8) ?? Data())
-                    fflush(stderr)
-                    break
-                }
-            }
-
+        while loop.shouldContinue() {
             // Get next frame from stream
             guard let frame = frameReader.nextFrame() else {
                 // End of stream reached
@@ -47,14 +35,6 @@ actor VideoDisplayController {
                 let endMsg = "End of stream reached at loop \(loopCount) after \(frameCount) frames\n"
                 FileHandle.standardError.write(endMsg.data(using: .utf8) ?? Data())
                 fflush(stderr)
-
-                if let timeout = args.timeoutSeconds {
-                    let elapsed = Int(Date().timeIntervalSince(startTime))
-                    if elapsed >= timeout {
-                        logger.info("Timeout reached (\(elapsed, privacy: .public)s >= \(timeout, privacy: .public)s), stopping playback")
-                        break
-                    }
-                }
 
                 // Reset for looping
                 if frameReader.reset() {
@@ -92,15 +72,25 @@ actor VideoDisplayController {
 
             // Log progress every 30 frames
             if framesSent % 30 == 0 {
-                let elapsed = Int(Date().timeIntervalSince(startTime))
+                let elapsed = Int(loop.elapsed)
                 let progressMsg = "Progress: \(framesSent) frames sent, elapsed \(elapsed)s\n"
                 FileHandle.standardError.write(progressMsg.data(using: .utf8) ?? Data())
                 fflush(stderr)
             }
 
-            // Wait for frame duration
-            let delayMs = frame.durationMs
-            try? await Task.sleep(for: .milliseconds(delayMs))
+            // Accumulate frame delay
+            accumulatedDelayMs += frame.durationMs
+            loop.nextFrame()
+
+            // Sleep for accumulated delay
+            if accumulatedDelayMs > 0 {
+                do {
+                    try await Task.sleep(for: .milliseconds(accumulatedDelayMs))
+                } catch {
+                    break
+                }
+            }
+            accumulatedDelayMs = 0
         }
 
         logger.info("Video playback complete: \(framesSent, privacy: .public) frames sent, \(loopCount, privacy: .public) loops")

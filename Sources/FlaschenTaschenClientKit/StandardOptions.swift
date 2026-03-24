@@ -7,9 +7,11 @@ nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: 
 
 /// Standard options common to most clients - immutable value type, safe for concurrent use
 public nonisolated struct StandardOptions: Sendable {
+    public static let defaultTimeout: Double = 60 * 60 * 24.0  // 24 hours
+
     public var hostname: String?
     public var layer: Int = 1
-    public var timeout: Double = 60 * 60 * 24.0  // 24 hours
+    public var timeout: Double = defaultTimeout
     public var width: Int = 45
     public var height: Int = 35
     public var xoff: Int = 0

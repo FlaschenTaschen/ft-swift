@@ -10,7 +10,6 @@ actor ImageDisplayController {
     private let canvas: UDPFlaschenTaschen
     private let imageData: ImageData
     private let args: ImageArgs
-    private var shouldStop = false
 
     init(canvas: UDPFlaschenTaschen, imageData: ImageData, args: ImageArgs) {
         self.canvas = canvas
@@ -41,17 +40,11 @@ actor ImageDisplayController {
     }
 
     private func displayAnimation(startTime: Date) async {
+        let loop = AnimationLoop(timeout: Double(args.timeoutSeconds ?? Int(StandardOptions.defaultTimeout)), delay: 1)
         var frameIndex = 0
+        var frameAccumulatedMs = 0
 
-        while !shouldStop {
-            // Check timeout
-            if let timeout = args.timeoutSeconds {
-                let elapsed = Int(Date().timeIntervalSince(startTime))
-                if elapsed >= timeout {
-                    break
-                }
-            }
-
+        while loop.shouldContinue() {
             let frame = imageData.frames[frameIndex]
             let scaledFrame = scaleAndCenter(
                 frame: frame,
@@ -62,11 +55,19 @@ actor ImageDisplayController {
             drawFrame(frame: scaledFrame)
             canvas.send()
 
-            // Wait for frame delay
-            let delayMs = frame.delayMs
-            try? await Task.sleep(for: .milliseconds(delayMs))
-
+            frameAccumulatedMs += frame.delayMs
             frameIndex = (frameIndex + 1) % imageData.frames.count
+
+            // Sleep for accumulated delay
+            if frameAccumulatedMs > 0 {
+                do {
+                    try await Task.sleep(for: .milliseconds(frameAccumulatedMs))
+                } catch {
+                    break
+                }
+            }
+            frameAccumulatedMs = 0
+            loop.nextFrame()
         }
     }
 
@@ -80,18 +81,11 @@ actor ImageDisplayController {
         )
 
         let scrollRange = scaledFrame.width
+        let loop = AnimationLoop(timeout: Double(args.timeoutSeconds ?? Int(StandardOptions.defaultTimeout)), delay: args.scrollDelayMs)
 
-        while !shouldStop {
-            // Check timeout
-            if let timeout = args.timeoutSeconds {
-                let elapsed = Int(Date().timeIntervalSince(startTime))
-                if elapsed >= timeout {
-                    break
-                }
-            }
-
+        while loop.shouldContinue() {
             for position in 0..<scrollRange {
-                if shouldStop {
+                if !loop.shouldContinue() {
                     return
                 }
 
@@ -101,14 +95,18 @@ actor ImageDisplayController {
                     scrollPosition: position
                 )
                 canvas.send()
+                loop.nextFrame()
 
-                try? await Task.sleep(for: .milliseconds(args.scrollDelayMs))
+                do {
+                    try await loop.sleep()
+                } catch {
+                    return
+                }
             }
         }
     }
 
     private func displayStatic() async {
-        let startTime = Date()
         guard let firstFrame = imageData.frames.first else { return }
 
         let scaledFrame = scaleAndCenter(
@@ -117,19 +115,18 @@ actor ImageDisplayController {
             targetHeight: canvas.height
         )
 
-        // Keep display alive for timeout duration
-        while !shouldStop {
-            if let timeout = args.timeoutSeconds {
-                let elapsed = Int(Date().timeIntervalSince(startTime))
-                if elapsed >= timeout {
-                    break
-                }
-            }
+        let loop = AnimationLoop(timeout: Double(args.timeoutSeconds ?? Int(StandardOptions.defaultTimeout)), delay: 100)
 
+        while loop.shouldContinue() {
             drawFrame(frame: scaledFrame)
             canvas.send()
+            loop.nextFrame()
 
-            try? await Task.sleep(for: .milliseconds(100))
+            do {
+                try await loop.sleep()
+            } catch {
+                break
+            }
         }
     }
 

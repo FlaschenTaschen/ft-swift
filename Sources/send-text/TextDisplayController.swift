@@ -10,16 +10,11 @@ actor TextDisplayController {
     private let canvas: UDPFlaschenTaschen
     private let font: BDFFont
     private let args: TextArgs
-    private var shouldStop = false
 
     init(canvas: UDPFlaschenTaschen, font: BDFFont, args: TextArgs) {
         self.canvas = canvas
         self.font = font
         self.args = args
-    }
-
-    nonisolated func stop() {
-        // Signal handling would set this
     }
 
     func displayText() async {
@@ -42,7 +37,7 @@ actor TextDisplayController {
             }
         } else {
             // Static display
-            displayStatic(yPos: yPos, xPos: xPos)
+            await displayStaticWithTimeout(yPos: yPos, xPos: xPos)
         }
 
         // Clear display if not scrolling forever
@@ -55,53 +50,53 @@ actor TextDisplayController {
     private func displayHorizontalScroll(yPos: Int) async {
         let width = canvas.width
         let textWidth = measureTextWidth(args.text)
+        let scrollRange = textWidth + width
+        let loop = AnimationLoop(timeout: args.standardOptions.timeout, delay: args.scrollDelayMs)
+        let runOnce = args.runOnce
+        let backgroundColor = args.backgroundColor
+        let textColor = args.textColor
+        let outlineColor = args.outlineColor
+        let letterSpacing = args.letterSpacing
+        let text = args.text
 
-        var continue_loop = true
-        while continue_loop && !shouldStop {
-            for s in 0...(textWidth + width) {
-                if shouldStop {
-                    continue_loop = false
-                    break
-                }
+        while loop.shouldContinue() {
+            let frameCount = loop.frameCount
+            let s = runOnce ? frameCount % (scrollRange + 1) : frameCount % (scrollRange + 1)
+            let scrollPos = width - s
 
-                let scrollPos = width - s
+            canvas.fill(color: backgroundColor)
 
-                canvas.fill(color: args.backgroundColor)
-
-                if let outline = args.outlineColor {
-                    _ = drawText(
-                        canvas: canvas,
-                        font: font,
-                        x: scrollPos,
-                        y: yPos,
-                        color: outline,
-                        backgroundColor: nil,
-                        text: args.text,
-                        letterSpacing: args.letterSpacing - 2
-                    )
-                }
-
+            if let outline = outlineColor {
                 _ = drawText(
                     canvas: canvas,
                     font: font,
-                    x: scrollPos + 1,
+                    x: scrollPos,
                     y: yPos,
-                    color: args.textColor,
+                    color: outline,
                     backgroundColor: nil,
-                    text: args.text,
-                    letterSpacing: args.letterSpacing
+                    text: text,
+                    letterSpacing: letterSpacing - 2
                 )
-
-                canvas.send()
-
-                // Sleep without blocking
-                try? await Task.sleep(for: .milliseconds(args.scrollDelayMs))
             }
 
-            if !args.runOnce {
-                continue_loop = !shouldStop
-            } else {
-                continue_loop = false
+            _ = drawText(
+                canvas: canvas,
+                font: font,
+                x: scrollPos + 1,
+                y: yPos,
+                color: textColor,
+                backgroundColor: nil,
+                text: text,
+                letterSpacing: letterSpacing
+            )
+
+            canvas.send()
+            loop.nextFrame()
+
+            do {
+                try await loop.sleep()
+            } catch {
+                break
             }
         }
     }
@@ -109,53 +104,69 @@ actor TextDisplayController {
     private func displayVerticalScroll(yPos: Int, xPos: Int) async {
         let height = canvas.height
         let textHeight = measureTextHeight(args.text)
+        let scrollRange = textHeight + height
+        let loop = AnimationLoop(timeout: args.standardOptions.timeout, delay: args.scrollDelayMs)
+        let runOnce = args.runOnce
+        let backgroundColor = args.backgroundColor
+        let textColor = args.textColor
+        let outlineColor = args.outlineColor
+        let letterSpacing = args.letterSpacing
+        let text = args.text
+        let fontHeight = font.fontHeight()
 
-        var continue_loop = true
-        while continue_loop && !shouldStop {
-            for s in 0...(textHeight + height) {
-                if shouldStop {
-                    continue_loop = false
-                    break
-                }
+        while loop.shouldContinue() {
+            let frameCount = loop.frameCount
+            let s = runOnce ? frameCount % (scrollRange + 1) : frameCount % (scrollRange + 1)
+            let scrollPos = height + fontHeight - s
 
-                let scrollPos = height + font.fontHeight() - s
+            canvas.fill(color: backgroundColor)
 
-                canvas.fill(color: args.backgroundColor)
-
-                if let outline = args.outlineColor {
-                    _ = drawVerticalText(
-                        canvas: canvas,
-                        font: font,
-                        x: xPos - 1,
-                        y: scrollPos,
-                        color: outline,
-                        backgroundColor: nil,
-                        text: args.text,
-                        letterSpacing: args.letterSpacing - 2
-                    )
-                }
-
+            if let outline = outlineColor {
                 _ = drawVerticalText(
                     canvas: canvas,
                     font: font,
-                    x: xPos,
+                    x: xPos - 1,
                     y: scrollPos,
-                    color: args.textColor,
+                    color: outline,
                     backgroundColor: nil,
-                    text: args.text,
-                    letterSpacing: args.letterSpacing
+                    text: text,
+                    letterSpacing: letterSpacing - 2
                 )
-
-                canvas.send()
-
-                // Sleep without blocking
-                try? await Task.sleep(for: .milliseconds(args.scrollDelayMs))
             }
 
-            if !args.runOnce {
-                continue_loop = !shouldStop
-            } else {
-                continue_loop = false
+            _ = drawVerticalText(
+                canvas: canvas,
+                font: font,
+                x: xPos,
+                y: scrollPos,
+                color: textColor,
+                backgroundColor: nil,
+                text: text,
+                letterSpacing: letterSpacing
+            )
+
+            canvas.send()
+            loop.nextFrame()
+
+            do {
+                try await loop.sleep()
+            } catch {
+                break
+            }
+        }
+    }
+
+    private func displayStaticWithTimeout(yPos: Int, xPos: Int) async {
+        let loop = AnimationLoop(timeout: args.standardOptions.timeout, delay: 100)
+
+        while loop.shouldContinue() {
+            displayStatic(yPos: yPos, xPos: xPos)
+            loop.nextFrame()
+
+            do {
+                try await loop.sleep()
+            } catch {
+                break
             }
         }
     }

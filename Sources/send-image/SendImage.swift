@@ -71,7 +71,6 @@ struct SendImage {
         )
 
         // Set up signal handling
-        let startTime = Date()
         let signalSource = DispatchSource.makeSignalSource(signal: SIGINT)
         signalSource.setEventHandler {
             logger.info("Received SIGINT, clearing display and exiting")
@@ -98,17 +97,14 @@ struct SendImage {
         }
         signalSourceTerm.resume()
 
-        // Display image
+        // Display image (timeout is now handled via AnimationLoop inside displayImage)
         let controller = ImageDisplayController(canvas: canvas, imageData: imageData, args: args)
         await controller.displayImage()
 
         // Don't let leftovers cover up content (match C++ behavior)
-        if let timeout = args.timeoutSeconds {
-            let elapsed = Int(Date().timeIntervalSince(startTime))
-            if elapsed >= timeout {
-                canvas.clear()
-                canvas.send()
-            }
+        if args.standardOptions.layer > 0 {
+            canvas.clear()
+            canvas.send()
         }
 
         // Cleanup
