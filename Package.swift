@@ -5,7 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "ft-swift",
-    platforms: [.macOS(.v15)],
+    platforms: [.macOS(.v15), .tvOS(.v18)],
     products: [
         // Libraries
         .library(name: "FlaschenTaschenServerKit", targets: ["FlaschenTaschenServerKit"]),
