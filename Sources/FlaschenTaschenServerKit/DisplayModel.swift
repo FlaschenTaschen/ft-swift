@@ -45,8 +45,8 @@ public final class DisplayModel: @unchecked Sendable {
 
     private var server: UDPServer?
     private var pendingPixelUpdate: [PixelColor]?
-    private var frameUpdateTimer: Timer?
-    private var layerClearTimer: Timer?
+    private var frameUpdateTask: Task<Void, Never>?
+    private var layerClearTask: Task<Void, Never>?
     private var layerStatsUpdateTask: Task<Void, Never>?
     private var frameCounter: Int = 0
     private var lastFPSUpdate: Date = Date()
@@ -105,9 +105,9 @@ public final class DisplayModel: @unchecked Sendable {
 
         logger.info("Starting UDP server")
         ipAddress = getLocalIPAddress()
-        startFrameUpdateTimer()
-        startLayerCleanupTimer()
-        startLayerStatsUpdateTimer()
+        startFrameUpdateTask()
+        startLayerCleanupTask()
+        startLayerStatsUpdateTask()
 
         let pixelUpdateCallback: @Sendable (PPMImage) async -> Void = { [weak self] image in
             await MainActor.run { [weak self] in
@@ -147,7 +147,7 @@ public final class DisplayModel: @unchecked Sendable {
             do {
                 try await server?.start()
             } catch {
-                DispatchQueue.main.async {
+                await MainActor.run {
                     logger.error("Server startup failed: \(error.localizedDescription)")
                     self.serverError = error.localizedDescription
                     self.isServerRunning = false
@@ -160,24 +160,33 @@ public final class DisplayModel: @unchecked Sendable {
         logger.info("Stopping server, packets received: \(self.packetsReceived, privacy: .public)")
         isServerRunning = false
         serverError = nil
-        stopFrameUpdateTimer()
-        stopLayerCleanupTimer()
-        stopLayerStatsUpdateTimer()
+        stopFrameUpdateTask()
+        stopLayerCleanupTask()
+        stopLayerStatsUpdateTask()
         Task {
             await server?.stop()
         }
     }
 
-    private func startFrameUpdateTimer() {
+    private func startFrameUpdateTask() {
         let frameInterval = 1.0 / Double(maxFrameRate)
-        frameUpdateTimer = Timer.scheduledTimer(withTimeInterval: frameInterval, repeats: true) { [weak self] _ in
-            self?.processFrameUpdate()
+
+        frameUpdateTask?.cancel()
+        frameUpdateTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(Int(frameInterval * 1000)))
+                if !Task.isCancelled {
+                    await MainActor.run {
+                        self.processFrameUpdate()
+                    }
+                }
+            }
         }
     }
 
-    private func stopFrameUpdateTimer() {
-        frameUpdateTimer?.invalidate()
-        frameUpdateTimer = nil
+    private func stopFrameUpdateTask() {
+        frameUpdateTask?.cancel()
+        frameUpdateTask = nil
         currentFPS = 0
     }
 
@@ -283,30 +292,40 @@ public final class DisplayModel: @unchecked Sendable {
         return address
     }
 
-    private func startLayerCleanupTimer() {
-        layerClearTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.cleanupExpiredLayers()
-        }
-    }
-
-    private func stopLayerCleanupTimer() {
-        layerClearTimer?.invalidate()
-        layerClearTimer = nil
-    }
-
-    private func startLayerStatsUpdateTimer() {
-        layerStatsUpdateTask?.cancel()
-        layerStatsUpdateTask = Task {
+    private func startLayerCleanupTask() {
+        layerClearTask?.cancel()
+        layerClearTask = Task {
             while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(100)) // 100ms
-                if !layerStats.isEmpty {
-                    updateLayerStats()
+                try? await Task.sleep(for: .seconds(1))
+                if !Task.isCancelled {
+                    await MainActor.run {
+                        self.cleanupExpiredLayers()
+                    }
                 }
             }
         }
     }
 
-    private func stopLayerStatsUpdateTimer() {
+    private func stopLayerCleanupTask() {
+        layerClearTask?.cancel()
+        layerClearTask = nil
+    }
+
+    private func startLayerStatsUpdateTask() {
+        layerStatsUpdateTask?.cancel()
+        layerStatsUpdateTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(100)) // 100ms
+                if !layerStats.isEmpty {
+                    await MainActor.run {
+                        self.updateLayerStats()
+                    }
+                }
+            }
+        }
+    }
+
+    private func stopLayerStatsUpdateTask() {
         layerStatsUpdateTask?.cancel()
         layerStatsUpdateTask = nil
     }
