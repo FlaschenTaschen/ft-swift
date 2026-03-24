@@ -101,5 +101,5 @@ nonisolated private func printUsage(programName: String) {
         -b<brightness>  : Brightness percent (default: 100, range: 0-100)
         -t<timeout>     : Playback duration in seconds
     """
-    logger.info("\(usage, privacy: .public)")
+    print(usage)
 }

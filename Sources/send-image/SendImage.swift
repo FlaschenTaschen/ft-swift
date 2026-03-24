@@ -129,5 +129,5 @@ nonisolated private func printUsage(programName: String) {
         -t<timeout>     : Display duration in seconds
         -C              : Clear given area and exit
     """
-    logger.info("\(usage, privacy: .public)")
+    print(usage)
 }

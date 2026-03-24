@@ -129,5 +129,5 @@ nonisolated private func printUsage(programName: String) {
         -o<RRGGBB>      : Outline color as hex (default: no outline)
         -v              : Scroll text vertically
     """
-    logger.info("\(usage, privacy: .public)")
+    print(usage)
 }
