@@ -39,6 +39,7 @@ let package = Package(
         .executable(name: "quilt", targets: ["quilt"]),
         .executable(name: "firefly", targets: ["firefly"]),
         .executable(name: "depth", targets: ["depth"]),
+        .executable(name: "grayscale", targets: ["grayscale"]),
 
         // Mathematical & Algorithmic
         .executable(name: "life", targets: ["life"]),
@@ -89,6 +90,7 @@ let package = Package(
         .executableTarget(name: "quilt", dependencies: ["FlaschenTaschenDemoKit"]),
         .executableTarget(name: "firefly", dependencies: ["FlaschenTaschenDemoKit"]),
         .executableTarget(name: "depth", dependencies: ["FlaschenTaschenDemoKit"]),
+        .executableTarget(name: "grayscale", dependencies: ["FlaschenTaschenDemoKit"]),
 
         // Mathematical & Algorithmic
         .executableTarget(name: "life", dependencies: ["FlaschenTaschenDemoKit"]),
