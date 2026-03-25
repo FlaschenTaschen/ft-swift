@@ -241,6 +241,10 @@ public final class DisplayModel: @unchecked Sendable {
         initializePixelData()
     }
 
+    var canSupportPixelGrid: Bool {
+        gridWidth * gridHeight <= 4096
+    }
+
     public func calculateOptimalTVOSGridDimensions(for sceneSize: CGSize) -> (width: Int, height: Int) {
         let pixelSize: CGFloat = 16
         var maxWidth = Int(floor(sceneSize.width / pixelSize))

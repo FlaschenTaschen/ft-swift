@@ -12,7 +12,7 @@ public struct PlaneView: View {
     public var body: some View {
         #if os(tvOS)
         ZStack(alignment: .bottom) {
-            if displayModel.useCirclePixels {
+            if displayModel.useCirclePixels && displayModel.canSupportPixelGrid {
                 PixelGridView(displayModel: displayModel)
             } else {
                 BitmapGridView(displayModel: displayModel)
@@ -44,7 +44,7 @@ public struct PlaneView: View {
         }
         #else
         ZStack(alignment: .bottomTrailing) {
-            if displayModel.useCirclePixels {
+            if displayModel.useCirclePixels && displayModel.canSupportPixelGrid {
                 PixelGridView(displayModel: displayModel)
             } else {
                 BitmapGridView(displayModel: displayModel)
