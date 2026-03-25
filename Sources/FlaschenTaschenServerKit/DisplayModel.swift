@@ -239,6 +239,15 @@ public final class DisplayModel: @unchecked Sendable {
         gridWidth = width
         gridHeight = height
         initializePixelData()
+
+        // Restart server if running with new dimensions
+        if isServerRunning {
+            stopServer()
+            Task {
+                try? await Task.sleep(for: .milliseconds(100))
+                await startServer()
+            }
+        }
     }
 
     var canSupportPixelGrid: Bool {
