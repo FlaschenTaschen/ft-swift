@@ -5,6 +5,23 @@ import os.log
 
 nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: "grayscale")
 
+public enum GrayscaleOrientation: Sendable {
+    case horizontal
+    case vertical
+}
+
+public struct MaskData: Sendable {
+    public var pixels: [[UInt8]]
+    public var width: Int
+    public var height: Int
+
+    public init(pixels: [[UInt8]], width: Int, height: Int) {
+        self.pixels = pixels
+        self.width = width
+        self.height = height
+    }
+}
+
 public enum GrayscaleMode: Sendable {
     case bounce
     case center
@@ -19,29 +36,65 @@ public struct GrayscaleDemo: Sendable {
         public var standardOptions: StandardOptions
         public var logoColor: Color?
         public var mode: GrayscaleMode
-        public var mask: [[UInt8]]
-        public var imageWidth: Int
-        public var imageHeight: Int
+        public var masks: [MaskData]
+        public var orientation: GrayscaleOrientation
 
         public init(
             standardOptions: StandardOptions,
             logoColor: Color? = nil,
             mode: GrayscaleMode = .bounce,
-            mask: [[UInt8]] = [],
-            imageWidth: Int = 0,
-            imageHeight: Int = 0
+            masks: [MaskData] = [],
+            orientation: GrayscaleOrientation = .horizontal
         ) {
             self.standardOptions = standardOptions
             self.logoColor = logoColor
             self.mode = mode
-            self.mask = mask
-            self.imageWidth = imageWidth
-            self.imageHeight = imageHeight
+            self.masks = masks
+            self.orientation = orientation
         }
     }
 
     public static func run(options: Options, canvas: UDPFlaschenTaschen) async {
-        logger.info("grayscale: geometry=\(options.standardOptions.width, privacy: .public)x\(options.standardOptions.height, privacy: .public)+\(options.standardOptions.xoff, privacy: .public)+\(options.standardOptions.yoff, privacy: .public) layer=\(options.standardOptions.layer, privacy: .public) delay=\(options.standardOptions.delay, privacy: .public)ms mode=\(String(describing: options.mode), privacy: .public) imageSize=\(options.imageWidth, privacy: .public)x\(options.imageHeight, privacy: .public)")
+        let combined = combineMasks(masks: options.masks, orientation: options.orientation)
+        var imageWidth = combined.width
+        var imageHeight = combined.height
+        var mask = combined.pixels
+
+        // For non-bounce modes, pad the combined mask to display geometry to prevent server tiling issues
+        // This ensures the full display area is covered by our image data
+        if options.mode != .bounce && !mask.isEmpty {
+            let displayWidth = options.standardOptions.width
+            let displayHeight = options.standardOptions.height
+            if imageWidth < displayWidth || imageHeight < displayHeight {
+                // Pad horizontally if needed
+                if imageWidth < displayWidth {
+                    let padWidth = displayWidth - imageWidth
+                    let padLeft = padWidth / 2
+                    let padRight = padWidth - padLeft
+
+                    var paddedMask: [[UInt8]] = []
+                    for row in mask {
+                        var paddedRow = [UInt8](repeating: 255, count: padLeft) + row + [UInt8](repeating: 255, count: padRight)
+                        paddedMask.append(paddedRow)
+                    }
+                    mask = paddedMask
+                    imageWidth = displayWidth
+                }
+
+                // Pad vertically if needed
+                if imageHeight < displayHeight {
+                    let padHeight = displayHeight - imageHeight
+                    let padTop = padHeight / 2
+                    let padBottom = padHeight - padTop
+
+                    let emptyRow = [UInt8](repeating: 255, count: displayWidth)
+                    mask = [Array](repeating: emptyRow, count: padTop) + mask + [Array](repeating: emptyRow, count: padBottom)
+                    imageHeight = displayHeight
+                }
+            }
+        }
+
+        logger.info("grayscale: geometry=\(options.standardOptions.width, privacy: .public)x\(options.standardOptions.height, privacy: .public)+\(options.standardOptions.xoff, privacy: .public)+\(options.standardOptions.yoff, privacy: .public) layer=\(options.standardOptions.layer, privacy: .public) delay=\(options.standardOptions.delay, privacy: .public)ms mode=\(String(describing: options.mode), privacy: .public) imageSize=\(imageWidth, privacy: .public)x\(imageHeight, privacy: .public)")
 
         // Create rainbow palette
         var palette = [Color](repeating: Color(), count: 256)
@@ -74,8 +127,8 @@ public struct GrayscaleDemo: Sendable {
                 colorIndex: colorIndex,
                 displayWidth: options.standardOptions.width,
                 displayHeight: options.standardOptions.height,
-                imageWidth: options.imageWidth,
-                imageHeight: options.imageHeight
+                imageWidth: imageWidth,
+                imageHeight: imageHeight
             )
 
             // Clear canvas
@@ -88,12 +141,56 @@ public struct GrayscaleDemo: Sendable {
                 color: currentColor,
                 width: options.standardOptions.width,
                 height: options.standardOptions.height,
-                mask: options.mask,
+                mask: mask,
                 canvas: &canvas
             )
 
             canvas.setOffset(x: options.standardOptions.xoff, y: options.standardOptions.yoff, z: options.standardOptions.layer)
             canvas.send()
+        }
+    }
+
+    private static let imagePadding = 3
+
+    private static func combineMasks(
+        masks: [MaskData],
+        orientation: GrayscaleOrientation
+    ) -> MaskData {
+        guard !masks.isEmpty else { return MaskData(pixels: [], width: 0, height: 0) }
+        guard masks.count > 1 else { return masks[0] }
+
+        switch orientation {
+        case .horizontal:
+            let combinedWidth = masks.map(\.width).reduce(0, +) + (masks.count - 1) * imagePadding
+            let combinedHeight = masks.map(\.height).max() ?? 0
+            var combined = [[UInt8]](repeating: [UInt8](repeating: 255, count: combinedWidth), count: combinedHeight)
+            var xCursor = 0
+            for maskData in masks {
+                let yOffset = (combinedHeight - maskData.height) / 2
+                for (pixelY, row) in maskData.pixels.enumerated() {
+                    for (pixelX, value) in row.enumerated() {
+                        combined[yOffset + pixelY][xCursor + pixelX] = value
+                    }
+                }
+                xCursor += maskData.width + imagePadding
+            }
+            return MaskData(pixels: combined, width: combinedWidth, height: combinedHeight)
+
+        case .vertical:
+            let combinedWidth = masks.map(\.width).max() ?? 0
+            let combinedHeight = masks.map(\.height).reduce(0, +) + (masks.count - 1) * imagePadding
+            var combined = [[UInt8]](repeating: [UInt8](repeating: 255, count: combinedWidth), count: combinedHeight)
+            var yCursor = 0
+            for maskData in masks {
+                let xOffset = (combinedWidth - maskData.width) / 2
+                for (pixelY, row) in maskData.pixels.enumerated() {
+                    for (pixelX, value) in row.enumerated() {
+                        combined[yCursor + pixelY][xOffset + pixelX] = value
+                    }
+                }
+                yCursor += maskData.height + imagePadding
+            }
+            return MaskData(pixels: combined, width: combinedWidth, height: combinedHeight)
         }
     }
 

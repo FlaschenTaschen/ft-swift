@@ -18,8 +18,9 @@ struct Grayscale {
         }
 
         let args = standardOptions.nonStandardArgs
-        var filePath: String? = nil
+        var filePaths: [String] = []
         var mode: GrayscaleMode = .bounce
+        var orientation: GrayscaleOrientation = .horizontal
         var logoColor: Color? = nil
 
         var i = 0
@@ -31,7 +32,20 @@ struct Grayscale {
             case "f":
                 i += 1
                 if i < args.count {
-                    filePath = args[i]
+                    filePaths = args[i].split(separator: ",").map(String.init)
+                }
+            case "o":
+                i += 1
+                if i < args.count {
+                    switch args[i].lowercased() {
+                    case "horizontal":
+                        orientation = .horizontal
+                    case "vertical":
+                        orientation = .vertical
+                    default:
+                        print("Error: Unknown orientation '\(args[i])'. Valid orientations: horizontal, vertical")
+                        exit(EXIT_FAILURE)
+                    }
                 }
             case "m":
                 i += 1
@@ -65,50 +79,54 @@ struct Grayscale {
             i += 1
         }
 
-        guard let filePath = filePath else {
-            print("Error: -f <filepath> is required")
+        guard !filePaths.isEmpty else {
+            print("Error: -f <filepath[,filepath...]> is required")
             printUsage()
             exit(EXIT_FAILURE)
         }
 
-        // Load and parse JSON file
-        let mask: [[UInt8]]
-        let imageWidth: Int
-        let imageHeight: Int
+        // Load and parse JSON files
+        var masks: [MaskData] = []
 
         do {
-            let data = try Data(contentsOf: URL(fileURLWithPath: filePath))
-            let hexArray = try JSONDecoder().decode([[String]].self, from: data)
+            for filePath in filePaths {
+                let data = try Data(contentsOf: URL(fileURLWithPath: filePath))
+                let hexArray = try JSONDecoder().decode([[String]].self, from: data)
 
-            guard !hexArray.isEmpty else {
-                print("Error: JSON array is empty")
-                exit(EXIT_FAILURE)
-            }
-
-            imageHeight = hexArray.count
-            imageWidth = hexArray.map { $0.count }.max() ?? 0
-
-            guard imageWidth > 0 else {
-                print("Error: Invalid JSON structure")
-                exit(EXIT_FAILURE)
-            }
-
-            // Convert hex strings to grayscale
-            var convertedMask: [[UInt8]] = []
-            for row in hexArray {
-                var grayRow: [UInt8] = []
-                for hexString in row {
-                    guard let color = parseHexColor(hexString) else {
-                        throw NSError(domain: "InvalidHexColor", code: -1,
-                                    userInfo: [NSLocalizedDescriptionKey: "Invalid hex color: \(hexString)"])
-                    }
-                    // Luminance formula: 0.299*R + 0.587*G + 0.114*B
-                    let gray = UInt8(0.299 * Float(color.r) + 0.587 * Float(color.g) + 0.114 * Float(color.b))
-                    grayRow.append(gray)
+                guard !hexArray.isEmpty else {
+                    print("Error: JSON array is empty in \(filePath)")
+                    exit(EXIT_FAILURE)
                 }
-                convertedMask.append(grayRow)
+
+                let height = hexArray.count
+                let width = hexArray.map { $0.count }.max() ?? 0
+
+                guard width > 0 else {
+                    print("Error: Invalid JSON structure in \(filePath)")
+                    exit(EXIT_FAILURE)
+                }
+
+                // Convert hex strings to grayscale
+                var pixels: [[UInt8]] = []
+                var minGray = UInt8.max
+                var maxGray = UInt8.min
+                for row in hexArray {
+                    var grayRow: [UInt8] = []
+                    for hexString in row {
+                        guard let color = parseHexColor(hexString) else {
+                            throw NSError(domain: "InvalidHexColor", code: -1,
+                                        userInfo: [NSLocalizedDescriptionKey: "Invalid hex color: \(hexString)"])
+                        }
+                        // Luminance formula: 0.299*R + 0.587*G + 0.114*B
+                        let gray = UInt8(0.299 * Float(color.r) + 0.587 * Float(color.g) + 0.114 * Float(color.b))
+                        grayRow.append(gray)
+                        minGray = min(minGray, gray)
+                        maxGray = max(maxGray, gray)
+                    }
+                    pixels.append(grayRow)
+                }
+                masks.append(MaskData(pixels: pixels, width: width, height: height))
             }
-            mask = convertedMask
         } catch {
             print("Error: Failed to load or parse JSON file: \(error.localizedDescription)")
             exit(EXIT_FAILURE)
@@ -121,20 +139,20 @@ struct Grayscale {
             standardOptions: standardOptions,
             logoColor: logoColor,
             mode: mode,
-            mask: mask,
-            imageWidth: imageWidth,
-            imageHeight: imageHeight
+            masks: masks,
+            orientation: orientation
         )
         await GrayscaleDemo.run(options: options, canvas: canvas)
     }
 
     static func printUsage() {
         print("Grayscale - Render a JSON-defined pixel mask as grayscale")
-        print("Usage: grayscale -f <filepath> [options]")
+        print("Usage: grayscale -f <filepath[,...]> [options]")
         print("Options:")
-        print("  -f <filepath>   : JSON file with [[\"RRGGBB\", ...], ...] structure (required)")
-        print("  -m <mode>       : Positioning mode: bounce (default), center, left, right, top, bottom")
-        print("  -c <RRGGBB>     : Fixed color (default: rainbow palette)")
+        print("  -f <filepath[,...]> : One or more JSON files with [[\"RRGGBB\", ...], ...] (required)")
+        print("  -o <orientation>    : horizontal (default) or vertical")
+        print("  -m <mode>           : Positioning mode: bounce (default), center, left, right, top, bottom")
+        print("  -c <RRGGBB>         : Fixed color (default: rainbow palette)")
         StandardOptions.printStandardOptions()
     }
 }
