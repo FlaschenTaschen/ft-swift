@@ -3,6 +3,8 @@
 
 import PackageDescription
 
+let swiftSettings: [SwiftSetting]? = [.defaultIsolation(MainActor.self)]
+
 let package = Package(
     name: "ft-swift",
     platforms: [.macOS(.v15), .tvOS(.v18)],
@@ -57,7 +59,8 @@ let package = Package(
     ],
     targets: [
         // Server, Client and Demos Libraries
-        .target(name: "FlaschenTaschenServerKit"),
+        .target(name: "FlaschenTaschenServerKit", swiftSettings: swiftSettings),
+
         .target(name: "FlaschenTaschenClientKit"),
         .target(name: "FlaschenTaschenDemoKit", dependencies: ["FlaschenTaschenClientKit"]),
 
