@@ -258,15 +258,14 @@ public struct BitmapGridView: View {
         guard width > 0, height > 0 else { return nil }
 
         let capacity = width * height * 4
-        var bytes = [UInt8](unsafeUninitializedCapacity: capacity) { buffer, count in
-            for i in 0..<min(pixels.count, width * height) {
-                let base = i * 4
-                buffer[base] = pixels[i].red
-                buffer[base + 1] = pixels[i].green
-                buffer[base + 2] = pixels[i].blue
-                buffer[base + 3] = 255
-            }
-            count = capacity
+        var bytes = [UInt8](repeating: 0, count: capacity)
+
+        for i in 0..<min(pixels.count, width * height) {
+            let base = i * 4
+            bytes[base] = pixels[i].red
+            bytes[base + 1] = pixels[i].green
+            bytes[base + 2] = pixels[i].blue
+            bytes[base + 3] = 255
         }
 
         let colorSpace = CGColorSpaceCreateDeviceRGB()
