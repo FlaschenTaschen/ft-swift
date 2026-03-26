@@ -7,6 +7,23 @@ import Darwin
 
 nonisolated private let logger = Logger(subsystem: Logging.subsystem, category: "UDPServer")
 
+// Throttler ensures an action runs at most once per interval
+private actor Throttler {
+    private var lastRun: ContinuousClock.Instant?
+    private let clock = ContinuousClock()
+
+    func run(interval: Duration, action: @Sendable () async -> Void) async {
+        let now = clock.now
+
+        if let lastRun, now - lastRun < interval {
+            return
+        }
+
+        lastRun = now
+        await action()
+    }
+}
+
 public actor UDPServer {
     private let gridWidth: Int
     private let gridHeight: Int
@@ -19,10 +36,10 @@ public actor UDPServer {
 
     // Layer persistence for multi-packet accumulation
     private var layerBuffers: [Int: [PixelColor]] = [:]
-    private var layerTimers: [Int: Task<Void, Never>] = [:]
+    private var layerThrottlers: [Int: Throttler] = [:]
     private var lastPacketTime: Date?
     private let packetTimeoutSeconds: TimeInterval = 1.0
-    private let flushDelaySeconds: TimeInterval = 0.05  // 50ms to accumulate packets
+    private let flushInterval: Duration = .milliseconds(50)  // 50ms throttle for flushing
 
     public init(gridWidth: Int, gridHeight: Int,
          onPixelUpdate: @escaping @Sendable (PPMImage) async -> Void,
@@ -177,9 +194,6 @@ public actor UDPServer {
         let nonBlackCount = pixelGrid.filter { !($0.red == 0 && $0.green == 0 && $0.blue == 0) }.count
         logger.info("🖼️ SEND layer \(layer, privacy: .public): \(self.gridWidth, privacy: .public)x\(self.gridHeight, privacy: .public) (\(nonBlackCount, privacy: .public) non-black pixels)")
         await onPixelUpdate(completeImage)
-
-        // Clear the timer reference
-        layerTimers[layer] = nil
     }
 
     public func processPacket(_ data: Data) async {
@@ -226,20 +240,13 @@ public actor UDPServer {
                 layerBuffers[layer] = pixelGrid
                 lastPacketTime = now
 
-                // Cancel existing timer for this layer and schedule a new flush
-                if let existingTask = layerTimers[layer] {
-                    existingTask.cancel()
-                }
+                // Use throttler to ensure flush runs at regular intervals (not debounced)
+                let throttler = layerThrottlers[layer] ?? Throttler()
+                layerThrottlers[layer] = throttler
 
-                let delaySeconds = flushDelaySeconds
-                let flushTask = Task { [weak self] in
-                    try? await Task.sleep(for: .seconds(delaySeconds))
-
-                    if !Task.isCancelled {
-                        await self?.flushLayer(layer)
-                    }
+                await throttler.run(interval: flushInterval) { [weak self] in
+                    await self?.flushLayer(layer)
                 }
-                layerTimers[layer] = flushTask
             }
         } catch {
             logger.warning("Discarding malformed packet: \(error.localizedDescription, privacy: .public)")
