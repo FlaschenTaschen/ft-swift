@@ -204,6 +204,7 @@ public struct BitmapGridView: View {
 
             if let renderedImage {
                 Image(renderedImage, scale: 1.0, label: Text("Pixel Grid"))
+                    .interpolation(.none)
                     .resizable()
                     .scaledToFit()
                     .padding(8)
