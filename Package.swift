@@ -7,7 +7,7 @@ let swiftSettings: [SwiftSetting]? = [.defaultIsolation(MainActor.self)]
 
 let package = Package(
     name: "ft-swift",
-    platforms: [.macOS(.v15), .tvOS(.v18)],
+    platforms: [.macOS(.v15), .iOS(.v18), .tvOS(.v18), .watchOS(.v11)],
     products: [
         // Libraries
         .library(name: "FlaschenTaschenServerKit", targets: ["FlaschenTaschenServerKit"]),

@@ -118,7 +118,10 @@ struct Grayscale {
                                         userInfo: [NSLocalizedDescriptionKey: "Invalid hex color: \(hexString)"])
                         }
                         // Luminance formula: 0.299*R + 0.587*G + 0.114*B
-                        let gray = UInt8(0.299 * Float(color.r) + 0.587 * Float(color.g) + 0.114 * Float(color.b))
+                        let red = 0.299 * Float(color.r)
+                        let green = 0.587 * Float(color.g)
+                        let blue = 0.114 * Float(color.b)
+                        let gray = UInt8(red + green + blue)
                         grayRow.append(gray)
                         minGray = min(minGray, gray)
                         maxGray = max(maxGray, gray)
