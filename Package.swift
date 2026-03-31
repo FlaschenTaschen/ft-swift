@@ -18,6 +18,7 @@ let package = Package(
         .executable(name: "send-text", targets: ["send-text"]),
         .executable(name: "send-image", targets: ["send-image"]),
         .executable(name: "send-video", targets: ["send-video"]),
+        .executable(name: "ft-detect", targets: ["ft-detect"]),
 
         // Debugger
         .executable(name: "ft-debugger", targets: ["ft-debugger"]),
@@ -69,6 +70,7 @@ let package = Package(
         .executableTarget(name: "send-text", dependencies: ["FlaschenTaschenClientKit"]),
         .executableTarget(name: "send-image", dependencies: ["FlaschenTaschenClientKit"]),
         .executableTarget(name: "send-video", dependencies: ["FlaschenTaschenClientKit"]),
+        .executableTarget(name: "ft-detect", dependencies: ["FlaschenTaschenClientKit"]),
 
         // Debugger
         .executableTarget(name: "ft-debugger", dependencies: ["FlaschenTaschenClientKit", "FlaschenTaschenDemoKit"]),
