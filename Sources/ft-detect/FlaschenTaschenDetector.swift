@@ -156,7 +156,26 @@ struct FlaschenTaschenDetector {
         display: DisplayService
     ) {
         let geometry = "\(display.width)x\(display.height)"
-        let argv = [tool, "-h", display.address, "-g", geometry] + toolArgs
+
+        // Try to resolve the tool's full path
+        let toolPath: String
+        if tool.contains("/") {
+            toolPath = tool
+        } else {
+            // Search PATH for the tool
+            let paths = (ProcessInfo.processInfo.environment["PATH"] ?? "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin").split(separator: ":").map(String.init)
+            var resolved: String? = nil
+            for path in paths {
+                let fullPath = "\(path)/\(tool)"
+                if FileManager.default.fileExists(atPath: fullPath) {
+                    resolved = fullPath
+                    break
+                }
+            }
+            toolPath = resolved ?? tool
+        }
+
+        let argv = [toolPath, "-h", display.address, "-g", geometry] + toolArgs
         let cArgs = argv.map { strdup($0) } + [nil as UnsafeMutablePointer<CChar>?]
 
         defer {
@@ -167,10 +186,10 @@ struct FlaschenTaschenDetector {
         }
 
         var mutableArgs = cArgs
-        execvp(cArgs[0]!, &mutableArgs)
+        execv(cArgs[0]!, &mutableArgs)
 
         // Only reached on error
-        perror("execvp")
+        perror("execv")
         exit(1)
     }
 
@@ -228,7 +247,7 @@ struct FlaschenTaschenDetector {
                     i += 1
                     // Remaining args are client args
                     options.clientArgs = Array(args[i...])
-                    break
+                    return options  // Exit immediately after finding tool
                 }
                 i += 1
             }

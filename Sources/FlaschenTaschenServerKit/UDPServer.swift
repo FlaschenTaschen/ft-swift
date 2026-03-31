@@ -124,7 +124,11 @@ public actor UDPServer {
         var txtRecord: [String: Data] = [
             "width": Data(String(gridWidth).utf8),
             "height": Data(String(gridHeight).utf8),
-            "name": Data(mdnsDisplayName.utf8)
+            "name": Data(mdnsDisplayName.utf8),
+            "version": Data("1.0.0".utf8),
+            "backend": Data("ft".utf8),
+            "platform": Data(getPlatform().utf8),
+            "features": Data("0x000F".utf8)
         ]
 
         // Add optional URL if provided
@@ -144,6 +148,20 @@ public actor UDPServer {
         )
 
         logger.info("mDNS service advertising enabled: \(self.mdnsDisplayName, privacy: .public) (\(self.gridWidth, privacy: .public)x\(self.gridHeight, privacy: .public)) port 1337")
+    }
+
+    private func getPlatform() -> String {
+        #if os(macOS)
+        return "macOS"
+        #elseif os(tvOS)
+        return "tvOS"
+        #elseif os(iOS)
+        return "iOS"
+        #elseif os(iPadOS)
+        return "iPadOS"
+        #else
+        return "unknown"
+        #endif
     }
 
     private func handleStateChange(_ state: NWListener.State) {
