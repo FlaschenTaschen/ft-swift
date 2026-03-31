@@ -34,6 +34,11 @@ public actor UDPServer {
     private var startupError: Error?
     private var stopContinuation: CheckedContinuation<Void, Error>?
 
+    // mDNS/Bonjour service discovery configuration
+    private let mdnsEnabled: Bool
+    private let mdnsDisplayName: String
+    private let mdnsURL: String?
+
     // Layer persistence for multi-packet accumulation
     private var layerBuffers: [Int: [PixelColor]] = [:]
     private var layerThrottlers: [Int: Throttler] = [:]
@@ -44,12 +49,18 @@ public actor UDPServer {
     public init(gridWidth: Int, gridHeight: Int,
          onPixelUpdate: @escaping @Sendable (PPMImage) async -> Void,
          onError: @escaping (String) -> Void,
-         onReady: @escaping () -> Void) {
+         onReady: @escaping () -> Void,
+         mdnsEnabled: Bool = false,
+         mdnsDisplayName: String = "FlaschenTaschen",
+         mdnsURL: String? = nil) {
         self.gridWidth = gridWidth
         self.gridHeight = gridHeight
         self.onPixelUpdate = onPixelUpdate
         self.onError = onError
         self.onReady = onReady
+        self.mdnsEnabled = mdnsEnabled
+        self.mdnsDisplayName = mdnsDisplayName
+        self.mdnsURL = mdnsURL
     }
 
     public func start() async throws {
@@ -66,6 +77,11 @@ public actor UDPServer {
         }
 
         logger.info("UDP server starting on port 1337, grid=\(self.gridWidth, privacy: .public)x\(self.gridHeight, privacy: .public)")
+
+        // Configure mDNS/Bonjour service discovery if enabled
+        if mdnsEnabled {
+            configureServiceDiscovery(listener: listener)
+        }
 
         listener.newConnectionHandler = { [weak self] connection in
             Task { [weak self] in
@@ -99,6 +115,35 @@ public actor UDPServer {
 
     public func isListening() -> Bool {
         listener != nil
+    }
+
+    private func configureServiceDiscovery(listener: NWListener) {
+        let serviceType = "_flaschen-taschen._udp"
+
+        // Build TXT record dictionary with display metadata
+        var txtRecord: [String: Data] = [
+            "width": Data(String(gridWidth).utf8),
+            "height": Data(String(gridHeight).utf8),
+            "name": Data(mdnsDisplayName.utf8)
+        ]
+
+        // Add optional URL if provided
+        if let url = mdnsURL, !url.isEmpty {
+            txtRecord["url"] = Data(url.utf8)
+        }
+
+        // Convert to Bonjour TXT data
+        let txtData = NetService.data(fromTXTRecord: txtRecord)
+
+        // Create and configure the service
+        listener.service = NWListener.Service(
+            name: mdnsDisplayName,
+            type: serviceType,
+            domain: nil,
+            txtRecord: txtData
+        )
+
+        logger.info("mDNS service advertising enabled: \(self.mdnsDisplayName, privacy: .public) (\(self.gridWidth, privacy: .public)x\(self.gridHeight, privacy: .public)) port 1337")
     }
 
     private func handleStateChange(_ state: NWListener.State) {

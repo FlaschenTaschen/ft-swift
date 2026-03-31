@@ -25,6 +25,9 @@ public struct SettingsView: View {
     @State private var selectedPresetName: String = "Custom"
     @State private var selectedFrameRate: Int = 60
     @State private var tempLayerTimeout: String = ""
+    @State private var mdnsEnabled: Bool = false
+    @State private var tempMdnsDisplayName: String = ""
+    @State private var tempMdnsURL: String = ""
 
     public init(displayModel: DisplayModel) {
         self._displayModel = Bindable(displayModel)
@@ -89,6 +92,27 @@ public struct SettingsView: View {
                 }
             }
 
+            Section("Service Discovery (mDNS)") {
+                Toggle("Enable mDNS Advertisement", isOn: $mdnsEnabled)
+
+                if mdnsEnabled {
+                    HStack {
+                        Text("Display Name")
+                        Spacer()
+                        TextField("", text: $tempMdnsDisplayName)
+                            .frame(width: 150)
+                    }
+
+                    HStack {
+                        Text("URL (optional)")
+                        Spacer()
+                        TextField("", text: $tempMdnsURL)
+                            .frame(width: 200)
+                    }
+                    .font(.system(.caption))
+                }
+            }
+
             Section("Layers") {
                 HStack {
                     Text("Layer Timeout (seconds)")
@@ -124,7 +148,10 @@ public struct SettingsView: View {
         return currentWidth != displayModel.gridWidth ||
                currentHeight != displayModel.gridHeight ||
                selectedFrameRate != displayModel.maxFrameRate ||
-               currentLayerTimeout != displayModel.layerTimeout
+               currentLayerTimeout != displayModel.layerTimeout ||
+               mdnsEnabled != displayModel.mdnsEnabled ||
+               tempMdnsDisplayName != displayModel.mdnsDisplayName ||
+               tempMdnsURL != (displayModel.mdnsURL ?? "")
     }
 
     private func loadCurrentSettings() {
@@ -132,6 +159,9 @@ public struct SettingsView: View {
         tempGridHeight = String(displayModel.gridHeight)
         selectedFrameRate = displayModel.maxFrameRate
         tempLayerTimeout = String(displayModel.layerTimeout)
+        mdnsEnabled = displayModel.mdnsEnabled
+        tempMdnsDisplayName = displayModel.mdnsDisplayName
+        tempMdnsURL = displayModel.mdnsURL ?? ""
         updatePresetSelection()
     }
 
@@ -170,6 +200,11 @@ public struct SettingsView: View {
         } else {
             tempLayerTimeout = String(displayModel.layerTimeout)
         }
+
+        // Apply mDNS settings
+        displayModel.mdnsEnabled = mdnsEnabled
+        displayModel.mdnsDisplayName = tempMdnsDisplayName.isEmpty ? "FlaschenTaschen" : tempMdnsDisplayName
+        displayModel.mdnsURL = tempMdnsURL.isEmpty ? nil : tempMdnsURL
 
         displayModel.updateGridDimensions(width: newWidth, height: newHeight)
         displayModel.maxFrameRate = selectedFrameRate

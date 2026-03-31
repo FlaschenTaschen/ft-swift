@@ -42,6 +42,9 @@ public final class DisplayModel: @unchecked Sendable {
     var ipAddress: String = "..."
     var useCirclePixels: Bool = false
     var useLensDistortion: Bool = false
+    var mdnsEnabled: Bool = false
+    var mdnsDisplayName: String = "FlaschenTaschen"
+    var mdnsURL: String?
 
     private var server: UDPServer?
     private var pendingPixelUpdate: [PixelColor]?
@@ -81,6 +84,11 @@ public final class DisplayModel: @unchecked Sendable {
 
         useCirclePixels = defaults.bool(forKey: "displayUseCirclePixels")
         useLensDistortion = defaults.bool(forKey: "displayuseLensDistortion")
+
+        mdnsEnabled = defaults.bool(forKey: "displayMdnsEnabled")
+        let savedName = defaults.string(forKey: "displayMdnsName")
+        mdnsDisplayName = savedName?.isEmpty == false ? savedName! : "FlaschenTaschen"
+        mdnsURL = defaults.string(forKey: "displayMdnsURL")
     }
 
     public func saveSettings() {
@@ -92,6 +100,9 @@ public final class DisplayModel: @unchecked Sendable {
         defaults.set(layerTimeout, forKey: "displayLayerTimeout")
         defaults.set(useCirclePixels, forKey: "displayUseCirclePixels")
         defaults.set(useLensDistortion, forKey: "displayuseLensDistortion")
+        defaults.set(mdnsEnabled, forKey: "displayMdnsEnabled")
+        defaults.set(mdnsDisplayName, forKey: "displayMdnsName")
+        defaults.set(mdnsURL, forKey: "displayMdnsURL")
     }
 
     private func initializePixelData() {
@@ -140,7 +151,10 @@ public final class DisplayModel: @unchecked Sendable {
             gridHeight: gridHeight,
             onPixelUpdate: pixelUpdateCallback,
             onError: errorCallback,
-            onReady: readyCallback
+            onReady: readyCallback,
+            mdnsEnabled: mdnsEnabled,
+            mdnsDisplayName: mdnsDisplayName,
+            mdnsURL: mdnsURL
         )
 
         Task {
