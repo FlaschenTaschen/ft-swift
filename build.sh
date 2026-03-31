@@ -35,7 +35,7 @@ list_products() {
     echo "  Clients:"
     echo "    • send-text, send-image, send-video"
     echo "  Tools:"
-    echo "    • ft-debugger"
+    echo "    • ft-detect, ft-debugger"
     echo "  Demos: simple-example, simple-animation, black, random-dots, plasma,"
     echo "         matrix, blur, quilt, firefly, depth, life, fractal, sierpinski,"
     echo "         maze, lines, hack, words, nb-logo, sf-logo, midi, kbd2midi"
