@@ -11,6 +11,10 @@ public struct DisplayService: Sendable, Equatable {
     public let width: Int
     public let height: Int
     public let name: String              // From TXT record
+    public let version: String           // From TXT record (e.g., "1.0.0")
+    public let backend: String           // From TXT record (e.g., "ft", "rgb-matrix")
+    public let platform: String          // From TXT record (e.g., "macOS", "Linux")
+    public let features: UInt16          // From TXT record (hex features bitmask)
     public let url: String?              // From TXT record (optional)
 
     public init(
@@ -21,6 +25,10 @@ public struct DisplayService: Sendable, Equatable {
         width: Int,
         height: Int,
         name: String,
+        version: String = "unknown",
+        backend: String = "unknown",
+        platform: String = "unknown",
+        features: UInt16 = 0,
         url: String? = nil
     ) {
         self.instanceName = instanceName
@@ -30,7 +38,26 @@ public struct DisplayService: Sendable, Equatable {
         self.width = width
         self.height = height
         self.name = name
+        self.version = version
+        self.backend = backend
+        self.platform = platform
+        self.features = features
         self.url = url
+    }
+
+    /// Get list of supported feature names based on features bitmask
+    public func supportedFeatures() -> [String] {
+        var features: [String] = []
+        if hasFeature(0x0001) { features.append("multi-packet") }
+        if hasFeature(0x0002) { features.append("multi-layer") }
+        if hasFeature(0x0004) { features.append("offset") }
+        if hasFeature(0x0008) { features.append("layer-timeout") }
+        return features
+    }
+
+    /// Check if a specific feature bit is set
+    public func hasFeature(_ bit: UInt16) -> Bool {
+        (features & bit) != 0
     }
 }
 
@@ -180,6 +207,10 @@ private class ServiceBrowser: NSObject, NetServiceBrowserDelegate, NetServiceDel
         let width = parseIntValue(txtRecords["width"], defaultValue: 0)
         let height = parseIntValue(txtRecords["height"], defaultValue: 0)
         let name = parseStringValue(txtRecords["name"], defaultValue: service.name)
+        let version = parseStringValue(txtRecords["version"], defaultValue: "unknown")
+        let backend = parseStringValue(txtRecords["backend"], defaultValue: "unknown")
+        let platform = parseStringValue(txtRecords["platform"], defaultValue: "unknown")
+        let features = parseHexValue(txtRecords["features"], defaultValue: 0)
         let url = parseStringValue(txtRecords["url"])
 
         let displayService = DisplayService(
@@ -190,6 +221,10 @@ private class ServiceBrowser: NSObject, NetServiceBrowserDelegate, NetServiceDel
             width: width,
             height: height,
             name: name,
+            version: version,
+            backend: backend,
+            platform: platform,
+            features: features,
             url: url
         )
 
@@ -218,6 +253,19 @@ private class ServiceBrowser: NSObject, NetServiceBrowserDelegate, NetServiceDel
             .trimmingCharacters(in: CharacterSet(charactersIn: "\0")),
            let value = Int(string) {
             return value
+        }
+        return defaultValue
+    }
+
+    private func parseHexValue(_ data: Data?, defaultValue: UInt16 = 0) -> UInt16 {
+        guard let data = data else { return defaultValue }
+        if let string = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\0")) {
+            // Remove "0x" or "0X" prefix if present
+            let hexString = string.lowercased().hasPrefix("0x") ? String(string.dropFirst(2)) : string
+            if let value = UInt16(hexString, radix: 16) {
+                return value
+            }
         }
         return defaultValue
     }

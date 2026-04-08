@@ -114,6 +114,18 @@ struct FlaschenTaschenDetector {
         print("  Hostname: \(service.hostname)")
         print("  Port: \(service.port)")
         print("  Geometry: \(service.width)x\(service.height)")
+        print("  Backend: \(service.backend)")
+        print("  Platform: \(service.platform)")
+        print("  Version: \(service.version)")
+
+        let featureNames = service.supportedFeatures()
+        let featureStr = String(format: "0x%04x", service.features)
+        if !featureNames.isEmpty {
+            print("  Features: \(service.features) (\(featureStr)) [\(featureNames.joined(separator: ", "))]")
+        } else {
+            print("  Features: \(service.features) (\(featureStr))")
+        }
+
         if let url = service.url {
             print("  URL: \(url)")
         }
@@ -125,13 +137,17 @@ struct FlaschenTaschenDetector {
         print("FT_PORT=\"\(display.port)\"")
         print("FT_WIDTH=\"\(display.width)\"")
         print("FT_HEIGHT=\"\(display.height)\"")
+        print("FT_VERSION=\"\(display.version)\"")
+        print("FT_BACKEND=\"\(display.backend)\"")
+        print("FT_PLATFORM=\"\(display.platform)\"")
+        print("FT_FEATURES=\"\(String(format: "0x%04x", display.features))\"")
         if let url = display.url {
             print("FT_URL=\"\(url)\"")
         }
     }
 
     private static func printDisplayJSON(_ display: DisplayService) {
-        let dict: [String: Any] = [
+        var dict: [String: Any] = [
             "name": display.name,
             "instanceName": display.instanceName,
             "hostname": display.hostname,
@@ -139,8 +155,19 @@ struct FlaschenTaschenDetector {
             "port": display.port,
             "width": display.width,
             "height": display.height,
-            "url": display.url as Any
+            "version": display.version,
+            "backend": display.backend,
+            "platform": display.platform,
+            "features": display.features
         ]
+
+        if !display.supportedFeatures().isEmpty {
+            dict["featureNames"] = display.supportedFeatures()
+        }
+
+        if let url = display.url {
+            dict["url"] = url
+        }
 
         if let jsonData = try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted),
            let jsonString = String(data: jsonData, encoding: .utf8) {

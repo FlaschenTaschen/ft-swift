@@ -30,6 +30,7 @@ fi
 list_products() {
     echo "Products to build:"
     echo "  Libraries:"
+    echo "    • FlaschenTaschenServerKit"
     echo "    • FlaschenTaschenClientKit"
     echo "    • FlaschenTaschenDemoKit"
     echo "  Clients:"
